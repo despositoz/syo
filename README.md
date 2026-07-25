@@ -55,13 +55,28 @@ npm run dev
 
 ---
 
+## Публикация на GitHub Pages
+
+```bash
+npm run deploy:pages
+```
+
+Собирает бандл с базовым путём `/syo/` (без sourcemap) в `docs/`, кладёт рядом
+`404.html` — копию `index.html`, чтобы прямые ссылки вида `/syo/film/693134`
+не отдавали 404, — и `.nojekyll`. Папка `docs/` коммитится: в настройках
+репозитория Pages → *Deploy from a branch* → `main` / `/docs`.
+
+Итоговый адрес: `https://<аккаунт>.github.io/syo/`.
+
+Другой подпуть — `VITE_BASE=/другой/ npm run build`. Маршруты сами
+подстраиваются под базу (`src/app/routes.ts` читает `import.meta.env.BASE_URL`),
+поэтому ссылки не выходят за пределы приложения.
+
 ## Проверка в Telegram
 
-1. `npm run build` → статика в `dist/`.
-2. Выложить `dist/` на любой HTTPS-хостинг (GitHub Pages, Cloudflare Pages,
-   Netlify). Telegram открывает только HTTPS.
-3. В @BotFather: `/mybots` → бот → *Bot Settings* → *Menu Button* → указать URL.
-4. Открыть бота в Telegram и нажать кнопку меню.
+1. Опубликовать сборку по HTTPS (см. выше; Telegram открывает только HTTPS).
+2. В @BotFather: `/mybots` → бот → *Bot Settings* → *Menu Button* → указать URL.
+3. Открыть бота в Telegram и нажать кнопку меню.
 
 Локальная проверка на телефоне без деплоя: `npm run dev` слушает `0.0.0.0`, но
 Telegram требует HTTPS — понадобится туннель (`cloudflared tunnel --url http://localhost:5173`

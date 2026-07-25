@@ -13,8 +13,15 @@ export const RATE_LABEL = 'Оценить';
 const isRootTab = (value: string): value is RootTab =>
   (ROOT_TABS as readonly string[]).includes(value);
 
-/** Route → URL path. The browser fallback gets real, shareable URLs. */
-export const routeToPath = (route: Route): string => {
+/**
+ * Deploy base without a trailing slash: '' at the domain root, '/syo' when the
+ * app is published under a subdirectory (GitHub Pages). Every URL we write
+ * carries it and every URL we read has it stripped, so hosting under a
+ * subpath never leaks a link outside the app.
+ */
+const BASE = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+
+const relativePath = (route: Route): string => {
   switch (route.kind) {
     case 'root':
       return route.tab === 'feed' ? '/' : `/${route.tab}`;
@@ -25,9 +32,14 @@ export const routeToPath = (route: Route): string => {
   }
 };
 
+/** Route → URL path. The browser fallback gets real, shareable URLs. */
+export const routeToPath = (route: Route): string => `${BASE}${relativePath(route)}`;
+
 /** URL path → route stack. Unknown paths fall back to the feed. */
 export const pathToStack = (pathname: string): Route[] => {
-  const segments = pathname.split('/').filter(Boolean);
+  const withoutBase =
+    BASE && pathname.startsWith(BASE) ? pathname.slice(BASE.length) : pathname;
+  const segments = withoutBase.split('/').filter(Boolean);
   const [first, second] = segments;
 
   if (!first) return [{ kind: 'root', tab: 'feed' }];
