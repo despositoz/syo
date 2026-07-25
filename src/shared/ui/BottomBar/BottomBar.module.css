@@ -1,0 +1,122 @@
+.bar {
+  position: absolute;
+  left: max(var(--space-4), calc(var(--safe-left) + var(--space-3)));
+  right: max(var(--space-4), calc(var(--safe-right) + var(--space-3)));
+  /* Above the system inset — never under Telegram's chrome. */
+  bottom: calc(var(--safe-bottom) + var(--space-3));
+  z-index: var(--z-bottombar);
+  border-radius: var(--radius-xl);
+  background: var(--bottombar-bg);
+  border: 1px solid var(--bottombar-border);
+  backdrop-filter: blur(var(--bottombar-blur)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--bottombar-blur)) saturate(1.3);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.46);
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.bar[data-hidden='true'] {
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+  pointer-events: none;
+}
+
+.list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: stretch;
+  padding: var(--space-1);
+}
+
+.item {
+  display: flex;
+}
+
+.tab,
+.rate {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-1);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.tab[data-active='true'] {
+  color: var(--color-text);
+}
+
+/* Material indicator behind the active tab. */
+.indicator {
+  position: absolute;
+  inset: 4px 6px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-strong);
+  opacity: 0;
+  transform: scale(0.86);
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.tab[data-active='true'] .indicator {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.icon,
+.rateIcon {
+  position: relative;
+  width: 22px;
+  height: 22px;
+}
+
+.label {
+  position: relative;
+  font-size: 0.6875rem;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  /* Labels are always visible — never icon-only. */
+}
+
+.rate {
+  color: var(--color-accent-text);
+}
+
+.rateIcon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  /* Dark wine, not orange. */
+  background: var(--color-accent);
+  color: #fdf3f0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.rateIcon > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.tab:active,
+.rate:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar,
+  .indicator,
+  .tab,
+  .rate {
+    transition: none;
+  }
+}

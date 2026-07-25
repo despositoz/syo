@@ -1,0 +1,31 @@
+.toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-toolbar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  /* Controls live inside the content safe area, never under system chrome. */
+  padding-top: calc(var(--content-safe-top) + var(--space-2));
+  padding-bottom: var(--space-2);
+  padding-left: calc(var(--content-safe-left) + var(--space-3));
+  /* Right side additionally clears Telegram's close/menu cluster. */
+  padding-right: calc(
+    var(--content-safe-right) + var(--tg-controls-keepout-right) + var(--space-3)
+  );
+  pointer-events: none;
+}
+
+.toolbar > * {
+  pointer-events: auto;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}

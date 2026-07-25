@@ -1,0 +1,61 @@
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  /* Overscan gives parallax room to move without exposing an edge. */
+  transform: scale(var(--stage-overscan, 1));
+  /* Anchored at the top so a pull-down stretch grows downwards. */
+  transform-origin: center top;
+  will-change: transform;
+}
+
+.color {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    170deg,
+    rgba(var(--stage-accent-rgb), 0.85),
+    rgba(var(--stage-accent-rgb), 0.35) 60%,
+    var(--color-bg)
+  );
+}
+
+.preview,
+.full {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview {
+  filter: blur(20px) saturate(1.15);
+  transform: scale(1.06);
+  opacity: 0;
+  transition: opacity 140ms linear;
+}
+
+.stage[data-status='preview'] .preview,
+.stage[data-status='full'] .preview {
+  opacity: 1;
+}
+
+.full {
+  opacity: 0;
+  transition: opacity 220ms linear;
+}
+
+.stage[data-status='full'] .full {
+  opacity: 1;
+}
+
+:global(:root[data-performance='minimal']) .preview {
+  filter: blur(10px);
+}

@@ -1,0 +1,56 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Touch zone is never smaller than 44×44, whatever the icon size. */
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.button:active {
+  transform: scale(0.94);
+}
+
+.glass {
+  background: rgba(12, 10, 12, 0.46);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid rgba(255, 248, 236, 0.12);
+  color: var(--color-text-on-media);
+}
+
+.glass[aria-pressed='true'] {
+  background: rgba(255, 248, 236, 0.2);
+}
+
+.plain {
+  background: transparent;
+}
+
+.plain[aria-pressed='true'] {
+  color: var(--color-accent-text);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+}
+
+.icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+:global(:root[data-performance='minimal']) .glass {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(12, 10, 12, 0.82);
+}

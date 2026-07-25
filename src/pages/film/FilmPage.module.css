@@ -1,0 +1,143 @@
+.page {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+}
+
+.scroll {
+  height: 100%;
+}
+
+.hero {
+  position: relative;
+  /* Hero height is viewport-relative, never a fixed pixel offset. */
+  min-height: min(74vh, 620px);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.backdrop {
+  position: absolute;
+  inset: -6% 0 0 0;
+}
+
+.ambient {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: -30%;
+  height: 70%;
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    rgba(var(--ambient-rgb), 0.5),
+    rgba(var(--ambient-rgb), 0) 68%
+  );
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Bottom scrim only: the top is handled by TopShade, which stays shallow. */
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    var(--color-bg) 0%,
+    rgba(0, 0, 0, 0.72) 22%,
+    rgba(0, 0, 0, 0.16) 52%,
+    rgba(0, 0, 0, 0) 74%
+  );
+}
+
+.heroContent {
+  position: relative;
+  z-index: var(--z-content);
+  /* Poster on the left, title block on the right, both aligned to the bottom. */
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-6) max(var(--space-5), calc(var(--content-safe-right) + var(--space-5)))
+    var(--space-5) max(var(--space-5), calc(var(--content-safe-left) + var(--space-5)));
+}
+
+.posterHolder {
+  width: 96px;
+  flex: none;
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.meta {
+  font-size: 0.875rem;
+  color: rgba(251, 246, 236, 0.76);
+  font-variant-numeric: tabular-nums;
+}
+
+.rating {
+  font-size: 0.875rem;
+  color: var(--color-text-on-media);
+  font-variant-numeric: tabular-nums;
+}
+
+.ratingSource {
+  color: rgba(251, 246, 236, 0.6);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5) max(var(--space-5), calc(var(--content-safe-right) + var(--space-5)))
+    calc(var(--safe-bottom) + var(--space-10))
+    max(var(--space-5), calc(var(--content-safe-left) + var(--space-5)));
+}
+
+.overview {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.director {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
+.directorLabel {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.staleNote {
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
+.staleNote button {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-2);
+  color: var(--color-accent-text);
+  text-decoration: underline;
+}
+

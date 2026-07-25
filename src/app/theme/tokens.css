@@ -1,0 +1,157 @@
+/*
+ * Design tokens.
+ *
+ * Layer 1 — Telegram/system runtime values, written by TelegramController only.
+ * Layer 2 — palette per theme.
+ * Layer 3 — semantic aliases used by components.
+ *
+ * Никогда не хардкодить верхний отступ 64px: используется --content-safe-top.
+ */
+
+:root {
+  /* --- Layer 1: runtime viewport + insets (written from JS) ------------- */
+  --tg-viewport-height: 100dvh;
+  --tg-viewport-stable-height: 100dvh;
+
+  --safe-top: 0px;
+  --safe-right: 0px;
+  --safe-bottom: 0px;
+  --safe-left: 0px;
+
+  --content-safe-top: 0px;
+  --content-safe-right: 0px;
+  --content-safe-bottom: 0px;
+  --content-safe-left: 0px;
+
+  /* Telegram system control keep-out (close/menu cluster on the right). */
+  --tg-controls-keepout-right: 0px;
+  --keyboard-height: 0px;
+
+  /* --- Layer 2: base scale --------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  --touch-min: 44px;
+
+  --z-content: 1;
+  --z-parallax: 0;
+  --z-shade: 20;
+  --z-toolbar: 30;
+  --z-bottombar: 40;
+  --z-page: 50;
+  --z-snackbar: 60;
+  --z-sheet: 70;
+
+  --duration-instant: 90ms;
+  --duration-fast: 140ms;
+  --duration-page-in: 220ms;
+  --duration-page-out: 190ms;
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 0.6, 1);
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue',
+    sans-serif;
+  --font-display:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif;
+}
+
+/* --- Layer 3: Cinema (default) ---------------------------------------- */
+:root,
+:root[data-theme='cinema'] {
+  color-scheme: dark;
+
+  --color-bg: #000000;
+  --color-bg-raised: #0b0a0c;
+  --color-bg-sunken: #000000;
+  --color-surface: rgba(255, 250, 242, 0.05);
+  --color-surface-strong: rgba(255, 250, 242, 0.1);
+  --color-hairline: rgba(255, 248, 236, 0.1);
+
+  /* Warm ivory — the text title is never black. */
+  --color-text: #f6efe2;
+  --color-text-secondary: rgba(246, 239, 226, 0.68);
+  --color-text-tertiary: rgba(246, 239, 226, 0.44);
+  --color-text-on-media: #fbf6ec;
+
+  /* Dark wine accent. Orange as primary is forbidden. */
+  --color-accent: #7d2436;
+  --color-accent-soft: rgba(125, 36, 54, 0.24);
+  --color-accent-text: #e9b7bf;
+  --color-focus: #d8b7bd;
+
+  --color-positive: #7fae8b;
+  --color-danger: #c2586a;
+
+  --color-ambient: rgba(125, 36, 54, 0.28);
+
+  --bottombar-bg: rgba(16, 13, 15, 0.72);
+  --bottombar-border: rgba(255, 248, 236, 0.1);
+  --bottombar-blur: 22px;
+
+  --shade-chrome-strength: 0.72;
+  --vignette-strength: 0.46;
+}
+
+/* --- Graphite: noticeably lighter, reading mode ------------------------ */
+:root[data-theme='graphite'] {
+  color-scheme: dark;
+
+  --color-bg: #17171a;
+  --color-bg-raised: #202024;
+  --color-bg-sunken: #121215;
+  --color-surface: rgba(240, 240, 245, 0.07);
+  --color-surface-strong: rgba(240, 240, 245, 0.12);
+  --color-hairline: rgba(240, 240, 245, 0.14);
+
+  --color-text: #f1eee9;
+  --color-text-secondary: rgba(241, 238, 233, 0.72);
+  --color-text-tertiary: rgba(241, 238, 233, 0.5);
+  --color-text-on-media: #f7f4ef;
+
+  --color-accent: #8b3548;
+  --color-accent-soft: rgba(139, 53, 72, 0.26);
+  --color-accent-text: #eec2cb;
+  --color-focus: #dcc0c6;
+
+  --color-positive: #8cbb98;
+  --color-danger: #cf6a7c;
+
+  --color-ambient: rgba(139, 53, 72, 0.2);
+
+  --bottombar-bg: rgba(38, 38, 43, 0.76);
+  --bottombar-border: rgba(240, 240, 245, 0.14);
+  --bottombar-blur: 20px;
+
+  --shade-chrome-strength: 0.6;
+  --vignette-strength: 0.38;
+}
+
+/* Reduce Motion + performance tiers collapse expensive tokens. */
+:root[data-motion='reduced'] {
+  --duration-fast: 1ms;
+  --duration-page-in: 1ms;
+  --duration-page-out: 1ms;
+}
+
+:root[data-performance='balanced'] {
+  --bottombar-blur: 12px;
+}
+
+:root[data-performance='minimal'] {
+  --bottombar-blur: 0px;
+  --bottombar-bg: rgba(16, 13, 15, 0.94);
+}

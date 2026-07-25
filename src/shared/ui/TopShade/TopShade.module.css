@@ -1,0 +1,44 @@
+.root {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: var(--z-shade);
+}
+
+/*
+ * A — system chrome shade.
+ * Height = system inset + one control row. Dense only in the top few pixels.
+ */
+.chrome {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--content-safe-top) + 46px);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, var(--shade-chrome-strength)) 0%,
+    rgba(0, 0, 0, calc(var(--shade-chrome-strength) * 0.42)) 46%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+/*
+ * B — media vignette. Soft, shallow, purely a connector between the controls
+ * and the image. It must not reach the title group.
+ */
+.vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--content-safe-top) + 96px);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, var(--vignette-strength)) 0%,
+    rgba(0, 0, 0, calc(var(--vignette-strength) * 0.34)) 38%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}

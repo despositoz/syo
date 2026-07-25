@@ -1,0 +1,84 @@
+.row {
+  display: grid;
+  /* Primary action to bookmark, roughly 4:1. */
+  grid-template-columns: 4fr 1fr;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.primary,
+.bookmark {
+  min-height: 56px;
+  border-radius: var(--radius-lg);
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  /*
+   * Deep cinematic wine. The film's dominant colour is a restrained wash in
+   * the upper-left only — enough to tint the button towards the film, never
+   * enough to lift it out of wine (and never towards orange-primary).
+   */
+  background:
+    linear-gradient(
+      132deg,
+      rgba(var(--film-accent-rgb), 0.34) 0%,
+      rgba(var(--film-accent-rgb), 0.08) 34%,
+      rgba(var(--film-accent-rgb), 0) 62%
+    ),
+    radial-gradient(120% 160% at 18% 0%, rgba(255, 226, 214, 0.14) 0%, rgba(255, 226, 214, 0) 58%),
+    linear-gradient(168deg, #7a2033 0%, #5d1727 44%, #3c1019 100%);
+  color: #fdf3f0;
+  font-size: 1rem;
+  font-weight: 620;
+  letter-spacing: -0.005em;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 236, 230, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.hint {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(253, 243, 240, 0.72);
+}
+
+/* Compact soft square: icon only, no label. */
+.bookmark {
+  display: grid;
+  place-items: center;
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-text-secondary);
+}
+
+.bookmark[data-active='true'] {
+  background: rgba(var(--film-accent-rgb), 0.28);
+  border-color: rgba(233, 183, 191, 0.34);
+  color: var(--color-accent-text);
+}
+
+.icon {
+  width: 22px;
+  height: 22px;
+}
+
+.primary:active,
+.bookmark:active {
+  transform: scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary,
+  .bookmark {
+    transition: none;
+  }
+}

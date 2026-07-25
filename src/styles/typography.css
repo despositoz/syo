@@ -1,0 +1,51 @@
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--color-text);
+  /* Text scaling: everything below is in rem/em so OS text size applies. */
+}
+
+.t-display {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 7vw, 2.25rem);
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.t-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 5.4vw, 1.6rem);
+  line-height: 1.18;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.t-heading {
+  font-size: 1.0625rem;
+  line-height: 1.3;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+}
+
+.t-body {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.t-secondary {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.t-caption {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--color-text-tertiary);
+}
+
+.t-mono-num {
+  font-variant-numeric: tabular-nums;
+}

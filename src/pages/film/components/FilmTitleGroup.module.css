@@ -1,0 +1,38 @@
+.group {
+  display: flex;
+  align-items: flex-end;
+  /* Geometry is identical in every mode, so committing to logo or text
+     never moves anything below it. */
+  min-height: 64px;
+}
+
+.text {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 5.6vw, 1.9rem);
+  line-height: 1.06;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  /* Warm ivory. The text title is never black and never inherits image colour. */
+  color: var(--color-text-on-media);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.logo {
+  max-width: 100%;
+  max-height: 64px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: left bottom;
+  filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.45));
+}
+
+/*
+ * Pending: the box is reserved and empty on screen, while the <h1> stays in the
+ * accessibility tree as .sr-only. Nothing is painted, so nothing can flash.
+ */

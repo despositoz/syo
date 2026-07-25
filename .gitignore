@@ -1,0 +1,20 @@
+node_modules
+dist
+dist-ssr
+coverage
+.vite
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+playwright-report
+test-results
+*.tsbuildinfo
+
+# Empty repo left here by GitHub Desktop — not part of this project.
+/syo/
+
+# Published build lives in docs/ and IS tracked (GitHub Pages serves it).
+!docs/
+

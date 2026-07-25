@@ -1,0 +1,52 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.title {
+  font-size: 0.8125rem;
+  font-weight: 620;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.list {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  padding-bottom: var(--space-1);
+  -webkit-overflow-scrolling: touch;
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 72px;
+  flex: none;
+  scroll-snap-align: start;
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+  background: var(--color-surface);
+}
+
+.name {
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.character {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: var(--color-text-tertiary);
+}

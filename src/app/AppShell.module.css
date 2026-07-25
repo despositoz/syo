@@ -1,0 +1,29 @@
+.shell {
+  position: relative;
+  width: 100%;
+  /* Telegram viewport height, with a browser fallback. */
+  height: var(--tg-viewport-height, 100dvh);
+  max-height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+  isolation: isolate;
+}
+
+.rootLayer {
+  position: absolute;
+  inset: 0;
+  /* The screen underneath is never scaled during a page transition. */
+  z-index: var(--z-content);
+}
+
+.pageLayer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-page);
+  background: var(--color-bg);
+  will-change: opacity, transform;
+}
+
+.pageLayer[data-direction='exit'] {
+  pointer-events: none;
+}
