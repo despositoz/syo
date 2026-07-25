@@ -15,6 +15,9 @@ test-results
 # Empty repo left here by GitHub Desktop — not part of this project.
 /syo/
 
+# Deliverable archives: generated from this repo, no reason to store them in it.
+*.zip
+
 # Published build lives in docs/ and IS tracked (GitHub Pages serves it).
 !docs/
 
