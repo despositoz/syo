@@ -37,6 +37,20 @@ export interface TelegramState {
   hapticsAvailable: boolean;
   /** Whether Telegram's own BackButton is currently shown. */
   backButtonVisible: boolean;
+  /**
+   * Last few Telegram lifecycle events, newest first. Exists so fullscreen can
+   * be *proven* on a real device instead of inferred from the code: the Profile
+   * screen renders this trail, and a screenshot of it inside Telegram shows
+   * whether requestFullscreen() was called and whether fullscreenChanged came
+   * back.
+   */
+  trail: readonly TelegramTrailEntry[];
+}
+
+export interface TelegramTrailEntry {
+  /** ms since app start, rounded. */
+  at: number;
+  label: string;
 }
 
 export type TelegramEventName =
@@ -113,4 +127,5 @@ export const initialTelegramState = (): TelegramState => ({
   keyboardHeight: 0,
   hapticsAvailable: false,
   backButtonVisible: false,
+  trail: [],
 });

@@ -87,6 +87,30 @@ test.describe('Film Page hero', () => {
     await expect(page.getByTestId('film-title')).toBeVisible();
   });
 
+  test('a missing backdrop stays atmospheric and never borrows the poster', async ({ page }) => {
+    await mockTmdb(page, { backdropPath: null, logo: 'none' });
+    await mockTelegram(page, { fullscreen: true });
+    await openFilm(page);
+
+    const stage = page.locator('[class*="FilmPage-module__backdrop"] [class*="ImageStage"]').first();
+    await expect(stage).toHaveAttribute('data-status', 'failed');
+
+    // The 2:3 poster must not be stretched across the landscape stage: the only
+    // image on the page is the poster in its own frame.
+    const backdropImages = await stage.locator('img').count();
+    expect(backdropImages).toBe(0);
+
+    // The colour environment is what the user sees instead.
+    const painted = await stage.evaluate((node) => {
+      const layer = node.querySelector('[class*="color"]');
+      if (!layer) return null;
+      const style = getComputedStyle(layer, '::before');
+      return { background: style.backgroundImage, area: node.getBoundingClientRect().height };
+    });
+    expect(painted?.background).toContain('radial-gradient');
+    expect(painted?.area ?? 0).toBeGreaterThan(0);
+  });
+
   test('the top shade stays shallow and does not cover the hero', async ({ page }) => {
     await mockTmdb(page, { logo: 'none' });
     await mockTelegram(page, { fullscreen: true });

@@ -36,8 +36,8 @@ export const CinematicCard = ({ film, scrollRef, onOpen }: CinematicCardProps) =
     <button ref={cardRef} type="button" className={styles.card} onClick={() => onOpen(film)}>
       <span className={styles.media}>
         <ImageStage
-          path={film.backdropPath || film.posterPath}
-          kind={film.backdropPath ? 'backdrop' : 'poster'}
+          path={film.backdropPath}
+          kind="backdrop"
           accent={film.accent}
           width={520}
           priority

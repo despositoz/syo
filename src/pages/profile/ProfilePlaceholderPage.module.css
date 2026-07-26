@@ -87,3 +87,29 @@
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
+
+.mono {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+/* Diagnostic trail: dense, quiet, never competing with the settings above. */
+.trail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.trailRow {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.trailRow .mono {
+  flex: 0 0 auto;
+  min-width: 5.5em;
+}

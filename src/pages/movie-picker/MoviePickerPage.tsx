@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigationController } from '@app/appServices';
 import { filmRepository } from '@entities/film/film.repository';
+import { openFilmWithPreflight } from '@pages/film/filmOpening';
 import { feedRepository } from '@entities/feed/feed.repository';
 import type { FilmSummary } from '@entities/film/film.model';
 import { isTmdbConfigured } from '@shared/api/tmdb/tmdb.client';
@@ -49,7 +50,8 @@ export const MoviePickerPage = () => {
 
   const openFilm = (film: FilmSummary) => {
     void filmRepository.saveSummaryAsFilm(film);
-    navigation.openFilm({ filmId: film.id, title: film.title });
+    // Preflight starts here, before the route is pushed (spec §17).
+    openFilmWithPreflight(navigation, film);
   };
 
   return (

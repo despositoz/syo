@@ -26,6 +26,7 @@ import { FilmActionRow } from './components/FilmActionRow';
 import { FilmDetails } from './components/FilmDetails';
 import { FilmCast } from './components/FilmCast';
 import { prepareFilmPresentationCached, type FilmPresentation } from './film.presentation';
+import { takeFilmOpening } from './filmOpening';
 import styles from './FilmPage.module.css';
 
 export interface FilmPageProps {
@@ -73,10 +74,14 @@ const useFilmData = (filmId: number) => {
 };
 
 /**
- * Runs the presentation preflight exactly once per film and freezes the result.
- * After it resolves the hero composition never changes (spec §17).
+ * Consumes the preflight that the opening coordinator started before this route
+ * was pushed (spec §17). The result is frozen: once it lands, the hero
+ * composition never changes again.
+ *
+ * A deep link or a reload has no coordinator opening to join, so the page falls
+ * back to running the preflight itself — the same function, one preflight.
  */
-const useFilmPresentation = (film: Film | null): FilmPresentation | null => {
+const useFilmPresentation = (filmId: number, film: Film | null): FilmPresentation | null => {
   const [presentation, setPresentation] = useState<FilmPresentation | null>(null);
   /**
    * One preflight per film id, shared by every run of this effect.
@@ -88,18 +93,22 @@ const useFilmPresentation = (film: Film | null): FilmPresentation | null => {
   const inflight = useRef(new Map<number, Promise<FilmPresentation>>());
 
   useEffect(() => {
-    if (!film) return;
-    // Wait for detailed data: logos only arrive with it, and committing to text
-    // early would lock the hero into text for this whole opening.
-    if (!film.detailed && !film.logoCandidates.length) return;
-
+    const started = takeFilmOpening(filmId);
     const pending =
-      inflight.current.get(film.id) ??
+      started ??
+      inflight.current.get(filmId) ??
       (() => {
+        if (!film) return null;
+        // Without detailed data there are no logo candidates yet, and
+        // committing to text early would lock the hero into text for this whole
+        // opening.
+        if (!film.detailed && !film.logoCandidates.length) return null;
         const promise = prepareFilmPresentationCached(film);
-        inflight.current.set(film.id, promise);
+        inflight.current.set(filmId, promise);
         return promise;
       })();
+
+    if (!pending) return;
 
     let active = true;
     void pending.then((result) => {
@@ -108,7 +117,7 @@ const useFilmPresentation = (film: Film | null): FilmPresentation | null => {
     return () => {
       active = false;
     };
-  }, [film]);
+  }, [filmId, film]);
 
   return presentation;
 };
@@ -124,7 +133,7 @@ export const FilmPage = ({ filmId, initialTitle }: FilmPageProps) => {
   const actionRowRef = useRef<HTMLDivElement>(null);
 
   const { film, isPending, isError, retry } = useFilmData(filmId);
-  const presentation = useFilmPresentation(film);
+  const presentation = useFilmPresentation(filmId, film);
 
   const reducedMotion = usePerformanceStore((state) => state.reducedMotion);
   const ambientEnabled = usePerformanceStore((state) => state.ambientEnabled);
@@ -216,8 +225,8 @@ export const FilmPage = ({ filmId, initialTitle }: FilmPageProps) => {
         <header className={styles.hero}>
           <div className={styles.backdrop}>
             <ImageStage
-              path={view.backdropPath || view.posterPath}
-              kind={view.backdropPath ? 'backdrop' : 'poster'}
+              path={view.backdropPath}
+              kind="backdrop"
               accent={view.accent}
               width={780}
               priority
@@ -271,7 +280,7 @@ export const FilmPage = ({ filmId, initialTitle }: FilmPageProps) => {
             ref={actionRowRef}
             accent={view.accent}
             inWatchlist={inWatchlist}
-            onRate={() => showSnackbar('Оценка появится на следующем этапе.')}
+            onRate={() => showSnackbar('Оценка появится в следующей версии')}
             onToggleWatchlist={onToggleWatchlist}
           />
 

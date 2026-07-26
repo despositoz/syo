@@ -79,6 +79,18 @@ describe('film presentation preflight', () => {
     expect(presentation.backdropPreviewUrl).toBe('preview/backdrop.jpg');
   });
 
+  it('never substitutes the poster for a missing backdrop', async () => {
+    const presentation = await prepareFilmPresentation(film({ backdropPath: '' }), {
+      pipeline: pipeline(),
+    });
+
+    // A 2:3 poster stretched across a landscape stage is worse than no image:
+    // the stage must stay on its atmospheric colour fallback instead.
+    expect(presentation.backdropUrl).toBe('');
+    expect(presentation.backdropPreviewUrl).toBe('');
+    expect(presentation.posterUrl).toBe('poster/poster.jpg');
+  });
+
   it('uses the text title when there is no logo at all', async () => {
     const presentation = await prepareFilmPresentation(film(), { pipeline: pipeline() });
 

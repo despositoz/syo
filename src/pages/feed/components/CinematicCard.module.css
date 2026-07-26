@@ -1,3 +1,12 @@
+/*
+ * ponytail: a landscape backdrop is centre-cropped into a 4:5 portrait frame,
+ * so some films lose their subject. TMDB exposes no focal point, safe-crop area
+ * or saliency data — /movie/{id}/images returns file paths, sizes and votes
+ * only — so there is nothing to centre on without inventing a heuristic.
+ * Deliberately left as centre-crop until a dedicated image art-direction pass:
+ * pick among all backdrops, per-film object-position, or saliency detection.
+ * Substituting the 2:3 poster here is NOT the fix and is forbidden (spec §13).
+ */
 .card {
   position: relative;
   display: block;

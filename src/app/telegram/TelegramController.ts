@@ -6,6 +6,7 @@ import {
   type TelegramEventName,
   type TelegramInsets,
   type TelegramState,
+  type TelegramTrailEntry,
   type TelegramWebApp,
 } from './telegramTypes';
 
@@ -141,6 +142,9 @@ export class TelegramController {
   private started = false;
   private fullscreenRequested = false;
   private layoutHeight = 0;
+  private readonly startedAt = Date.now();
+  /** Newest first, bounded — a diagnostic trail, not a log sink. */
+  private trail: TelegramTrailEntry[] = [];
 
   constructor(options: TelegramControllerOptions = {}) {
     this.win = options.window ?? (globalThis as unknown as Window & typeof globalThis);
@@ -178,6 +182,9 @@ export class TelegramController {
       safeCall(() => app.setBottomBarColor?.(SYSTEM_COLOR));
       // Prevents Telegram from closing the app on a downward scroll gesture.
       safeCall(() => app.disableVerticalSwipes?.());
+      this.mark(`ready+expand · ${app.platform ?? '?'} v${app.version ?? '?'}`);
+    } else {
+      this.mark('browser fallback (no Telegram initData)');
     }
 
     this.state = {
@@ -200,10 +207,12 @@ export class TelegramController {
     events.forEach((event) => this.bind(event, () => this.sync()));
     this.bind('fullscreenChanged', () => {
       this.fullscreenRequested = false;
+      this.mark(`fullscreenChanged → ${this.webApp?.isFullscreen ? 'on' : 'off'}`);
       this.sync({ fullscreen: this.webApp?.isFullscreen ? 'fullscreen' : 'expanded' });
     });
     this.bind('fullscreenFailed', () => {
       this.fullscreenRequested = false;
+      this.mark('fullscreenFailed');
       this.sync({ fullscreen: 'failed' });
     });
     this.bind('themeChanged', () => {
@@ -257,15 +266,22 @@ export class TelegramController {
     if (this.fullscreenRequested) return;
     if (this.state.fullscreen === 'fullscreen') return;
     if (!this.fullscreenSupported) {
+      this.mark(
+        this.state.inTelegram
+          ? `fullscreen unsupported (v${this.state.version} < ${FULLSCREEN_MIN_VERSION})`
+          : 'fullscreen unavailable (browser)',
+      );
       this.sync({ fullscreen: this.state.inTelegram ? this.state.fullscreen : 'unavailable' });
       return;
     }
     this.fullscreenRequested = true;
+    this.mark('requestFullscreen() called');
     this.sync({ fullscreen: 'requesting' });
     try {
       this.webApp?.requestFullscreen?.();
     } catch {
       this.fullscreenRequested = false;
+      this.mark('requestFullscreen() threw');
       this.sync({ fullscreen: 'failed' });
     }
   }
@@ -353,6 +369,11 @@ export class TelegramController {
     return Math.max(0, Math.round(this.layoutHeight - viewportHeight));
   }
 
+  /** Records one diagnostic line. Cheap enough to keep on in production. */
+  private mark(label: string): void {
+    this.trail = [{ at: Date.now() - this.startedAt, label }, ...this.trail].slice(0, 8);
+  }
+
   private sync(patch: Partial<TelegramState> = {}): void {
     const app = this.webApp;
     const inTelegram = this.state.inTelegram;
@@ -382,6 +403,7 @@ export class TelegramController {
       safeArea,
       contentSafeArea,
       keyboardHeight: this.measureKeyboardHeight(visualHeight),
+      trail: this.trail,
     };
 
     if (patch.fullscreen === undefined) {

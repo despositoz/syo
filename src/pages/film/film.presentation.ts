@@ -115,8 +115,11 @@ export const prepareFilmPresentation = async (
     // Poster is prepared before the backdrop (spec §22).
     posterPreviewUrl: pipeline.preview(film.posterPath, 'poster'),
     posterUrl: pipeline.poster(film.posterPath, posterWidth),
-    backdropPreviewUrl: pipeline.preview(film.backdropPath || film.posterPath, 'backdrop'),
-    backdropUrl: pipeline.backdrop(film.backdropPath || film.posterPath, backdropWidth),
+    // No poster substitution: a 2:3 poster stretched across a landscape stage
+    // is worse than no image at all. Without a backdrop the stage stays
+    // atmospheric — dominant colour and gradient only.
+    backdropPreviewUrl: pipeline.preview(film.backdropPath, 'backdrop'),
+    backdropUrl: pipeline.backdrop(film.backdropPath, backdropWidth),
     preparedAt: now(),
   };
 

@@ -4,6 +4,7 @@ import type { FilmSummary } from '@entities/film/film.model';
 import { filmRepository } from '@entities/film/film.repository';
 import { ErrorBlock } from '@shared/ui/ErrorBlock/ErrorBlock';
 import { Skeleton } from '@shared/ui/Skeleton/Skeleton';
+import { openFilmWithPreflight } from '@pages/film/filmOpening';
 import { useFeed } from './feed.service';
 import { FeedHeader } from './components/FeedHeader';
 import { CinematicCard } from './components/CinematicCard';
@@ -22,7 +23,8 @@ export const FeedPage = () => {
   const openFilm = (film: FilmSummary) => {
     // The summary is stored first, so the Film Page has data even offline.
     void filmRepository.saveSummaryAsFilm(film);
-    navigation.openFilm({ filmId: film.id, title: film.title });
+    // Preflight starts here, before the route is pushed (spec §17).
+    openFilmWithPreflight(navigation, film);
   };
 
   const [hero, ...rest] = feed.items;

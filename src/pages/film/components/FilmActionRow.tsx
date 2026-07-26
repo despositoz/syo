@@ -26,9 +26,12 @@ export const FilmActionRow = forwardRef<HTMLDivElement, FilmActionRowProps>(
         ref={ref}
         style={{ ['--film-accent-rgb' as string]: accent.rgb }}
       >
+        {/*
+          One line only. A CTA that advertises its own unfinished state inside
+          the button reads as a demo; the status belongs in the snackbar.
+        */}
         <button type="button" className={styles.primary} onClick={onRate}>
           Начать оценку
-          <span className={styles.hint}>Следующий этап</span>
         </button>
 
         <button

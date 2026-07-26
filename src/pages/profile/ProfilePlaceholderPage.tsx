@@ -79,7 +79,21 @@ export const ProfilePlaceholderPage = () => {
               </div>
               <div className={styles.row}>
                 <dt>Fullscreen</dt>
-                <dd>{telegram.fullscreen}</dd>
+                <dd>
+                  {telegram.fullscreen}
+                  {telegram.inTelegram ? ` · isFullscreen=${telegram.isFullscreen}` : ''}
+                </dd>
+              </div>
+              <div className={styles.row}>
+                <dt>Chrome</dt>
+                <dd>{telegram.chromeMode}</dd>
+              </div>
+              <div className={styles.row}>
+                <dt>Safe-area</dt>
+                <dd className={styles.mono}>
+                  {telegram.safeArea.top}/{telegram.safeArea.bottom} · content{' '}
+                  {telegram.contentSafeArea.top}/{telegram.contentSafeArea.bottom}
+                </dd>
               </div>
               <div className={styles.row}>
                 <dt>Графика</dt>
@@ -89,6 +103,28 @@ export const ProfilePlaceholderPage = () => {
                 </dd>
               </div>
             </dl>
+          </section>
+
+          {/*
+            Fullscreen cannot be proven by reading the code — this trail is what
+            a screenshot inside a real Telegram client shows (spec §7).
+          */}
+          <section aria-labelledby="trail-title">
+            <h2 className={styles.sectionTitle} id="trail-title">
+              Журнал Telegram
+            </h2>
+            {telegram.trail.length ? (
+              <ol className={styles.trail}>
+                {telegram.trail.map((entry, index) => (
+                  <li key={`${entry.at}-${index}`} className={styles.trailRow}>
+                    <span className={styles.mono}>+{entry.at} мс</span>
+                    <span>{entry.label}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className={styles.lead}>Событий пока нет.</p>
+            )}
           </section>
         </main>
       </div>

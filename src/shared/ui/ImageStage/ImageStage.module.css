@@ -26,6 +26,43 @@
   );
 }
 
+/*
+ * Atmospheric fallback (spec §25). With no backdrop the stage stays a colour
+ * environment: dominant colour, soft gradient, two ambient glows. A 2:3 poster
+ * is never stretched here, and a missing image never shows an error icon.
+ */
+.stage[data-status='failed'] .color::before,
+.stage[data-status='failed'] .color::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.stage[data-status='failed'] .color::before {
+  background:
+    radial-gradient(
+      120% 70% at 22% 12%,
+      rgba(var(--stage-accent-rgb), 0.7) 0%,
+      rgba(var(--stage-accent-rgb), 0) 62%
+    ),
+    radial-gradient(
+      90% 60% at 84% 68%,
+      rgba(var(--stage-accent-rgb), 0.42) 0%,
+      rgba(var(--stage-accent-rgb), 0) 70%
+    );
+}
+
+/* Grain-free depth: a soft dark falloff so type above stays readable. */
+.stage[data-status='failed'] .color::after {
+  background: linear-gradient(
+    195deg,
+    rgba(0, 0, 0, 0) 30%,
+    rgba(0, 0, 0, 0.32) 72%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+}
+
 .preview,
 .full {
   position: absolute;
