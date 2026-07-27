@@ -23,8 +23,25 @@ export interface ParallaxLayer {
   stretch?: number;
 }
 
-/** Pull distance, in px, that reaches the full stretch. */
-const PULL_RANGE = 180;
+/** Pull, in px, that buys the first full unit of stretch. */
+const PULL_SOFTNESS = 180;
+
+/**
+ * Rubber-band response with no ceiling (and no visible one).
+ *
+ * A linear ramp clamped at some distance has a wall: past it the image stops
+ * growing and the pull suddenly feels dead. This is logarithmic instead — it
+ * keeps giving forever, but each further millimetre of growth costs
+ * disproportionately more pull, so it just feels stiffer the further you go.
+ *
+ * Normalised so that the old full-pull distance still produces exactly the old
+ * amount of stretch: the first, most-used part of the gesture is unchanged, and
+ * only the part that used to hit the wall behaves differently.
+ *
+ *   180px → 1.00 unit      720px → 2.32 units
+ *   360px → 1.58 units    1440px → 3.17 units
+ */
+export const pullGrowth = (pull: number): number => Math.log1p(pull / PULL_SOFTNESS) / Math.LN2;
 
 const applyTransform = (element: HTMLElement, y: number, scale: number): void => {
   element.style.transform =
@@ -66,13 +83,13 @@ export const useScrollParallax = (
       if (signature === lastSignature) return;
       lastSignature = signature;
 
-      const pullProgress = Math.min(1, pull / PULL_RANGE);
+      const growth = pull > 0 ? pullGrowth(pull) : 0;
 
       for (const layer of layers) {
         const element = layer.ref.current;
         if (!element) continue;
         const offset = scrollTop * (1 - layer.speed) + (layer.drift ?? 0) * (scrollTop / 400);
-        const scale = (layer.baseScale ?? 1) + (layer.stretch ?? 0) * pullProgress;
+        const scale = (layer.baseScale ?? 1) + (layer.stretch ?? 0) * growth;
         applyTransform(element, offset, scale);
       }
     };

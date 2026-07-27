@@ -10,6 +10,13 @@
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="SYO — Show Your Opinion. Личный киноархив." />
     <title>SYO</title>
+    <!--
+      Every poster, backdrop and logo comes from these two hosts. Opening the
+      connections up front takes DNS and TLS off the critical path of the first
+      image — on mobile that handshake is most of the wait.
+    -->
+    <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
+    <link rel="preconnect" href="https://api.themoviedb.org" crossorigin />
     <!-- Telegram WebApp SDK. Absent in a plain browser — the app falls back gracefully. -->
     <script src="https://telegram.org/js/telegram-web-app.js?58"></script>
   </head>

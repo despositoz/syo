@@ -72,11 +72,18 @@ export interface PreflightDeps {
 }
 
 /**
- * Short enough that the hero is not visibly waiting, long enough for a cold
- * TMDB logo on a normal mobile connection (measured ~660 ms worst case, which
- * falls back to text and succeeds on the next opening).
+ * A logo is tiny (~8 KB at w300) but lives a full round trip away: measured
+ * 380-480 ms to image.tmdb.org on a fast desktop link, and 2-3x that on mobile,
+ * where the handshake is cold. The old 550 ms budget therefore passed on
+ * desktop and missed on phones — which is exactly where titles kept falling
+ * back to text.
+ *
+ * The budget now covers a realistic mobile fetch. The cost is a slightly longer
+ * pause before the title group paints (nothing is drawn until the decision is
+ * made, so there is still no text→logo flash); the gain is that phones get the
+ * logo on the first opening instead of the second.
  */
-const DEFAULT_BUDGET_MS = 550;
+const DEFAULT_BUDGET_MS = 1400;
 
 const freeze = (presentation: FilmPresentation): FilmPresentation => Object.freeze(presentation);
 
