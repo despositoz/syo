@@ -15,6 +15,8 @@ export default defineConfig({
       '@app': resolvePath('./src/app'),
       '@pages': resolvePath('./src/pages'),
       '@entities': resolvePath('./src/entities'),
+      '@domain': resolvePath('./src/domain'),
+      '@features': resolvePath('./src/features'),
       '@shared': resolvePath('./src/shared'),
       '@styles': resolvePath('./src/styles'),
     },

@@ -8,10 +8,15 @@ import { SyncIndicator } from '@shared/ui/SyncIndicator/SyncIndicator';
 import { runPageTransition } from '@shared/motion/transitions';
 import { usePerformanceStore } from './performance/PerformanceController';
 import { FeedPage } from '@pages/feed/FeedPage';
-import { DiaryPlaceholderPage } from '@pages/diary/DiaryPlaceholderPage';
+import { JournalScreen } from '@features/journal/screens/JournalScreen';
+import { JournalEntryScreen } from '@features/journal/screens/JournalEntryScreen';
 import { ProfilePlaceholderPage } from '@pages/profile/ProfilePlaceholderPage';
 import { MoviePickerPage } from '@pages/movie-picker/MoviePickerPage';
 import { FilmPage } from '@pages/film/FilmPage';
+import { RatingModeScreen } from '@features/rating/screens/RatingModeScreen';
+import { QuickRatingScreen } from '@features/rating/screens/QuickRatingScreen';
+import { DetailedRatingScreen } from '@features/rating/screens/DetailedRatingScreen';
+import { RatingResultScreen } from '@features/rating/screens/RatingResultScreen';
 import styles from './AppShell.module.css';
 
 const RootScreen = ({ tab }: { tab: RootTab }) => {
@@ -19,7 +24,7 @@ const RootScreen = ({ tab }: { tab: RootTab }) => {
     case 'feed':
       return <FeedPage />;
     case 'diary':
-      return <DiaryPlaceholderPage />;
+      return <JournalScreen />;
     case 'profile':
       return <ProfilePlaceholderPage />;
   }
@@ -31,6 +36,16 @@ const OverlayScreen = ({ route }: { route: Route }) => {
       return <MoviePickerPage />;
     case 'film':
       return <FilmPage filmId={route.filmId} initialTitle={route.title} />;
+    case 'rateMode':
+      return <RatingModeScreen filmId={route.filmId} />;
+    case 'rateQuick':
+      return <QuickRatingScreen filmId={route.filmId} />;
+    case 'rateAspect':
+      return <DetailedRatingScreen filmId={route.filmId} aspectId={route.aspectId} />;
+    case 'rateResult':
+      return <RatingResultScreen filmId={route.filmId} />;
+    case 'journalEntry':
+      return <JournalEntryScreen entryId={route.entryId} />;
     case 'root':
       return null;
   }

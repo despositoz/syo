@@ -11,6 +11,9 @@ import {
 interface NavigationActions {
   push: (route: Route) => void;
   pop: () => void;
+  /** Swaps the top route without growing the stack (steps inside a flow). */
+  replaceTop: (route: Route) => void;
+  current: () => Route;
   selectTab: (tab: RootTab) => void;
   /** Applied by NavigationController when the browser history moves. */
   replaceStack: (stack: Route[]) => void;
@@ -46,6 +49,15 @@ export const useNavigationStore = create<NavigationState & NavigationActions>((s
     const leaving = stack[stack.length - 1] ?? null;
     set({ stack: stack.slice(0, -1), phase: 'leaving', leaving });
   },
+
+  replaceTop: (route) => {
+    const { stack } = get();
+    if (!stack.length) return;
+    // No enter/leave phase: stepping between aspects is not a page change.
+    set({ stack: [...stack.slice(0, -1), route] });
+  },
+
+  current: () => get().stack[get().stack.length - 1] ?? { kind: 'root', tab: 'feed' },
 
   selectTab: (tab) =>
     set({ stack: [{ kind: 'root', tab }], activeTab: tab, phase: 'idle', leaving: null }),

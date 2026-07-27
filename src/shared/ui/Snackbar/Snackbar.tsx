@@ -17,7 +17,20 @@ export const Snackbar = () => {
     <div className={styles.region} role="status" aria-live="polite">
       {current ? (
         <div className={styles.snackbar} key={current.id}>
-          {current.text}
+          <span className={styles.text}>{current.text}</span>
+          {current.action ? (
+            <button
+              type="button"
+              className={styles.action}
+              onClick={() => {
+                current.action?.onAction();
+                dismiss();
+              }}
+              data-testid="snackbar-action"
+            >
+              {current.action.label}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>

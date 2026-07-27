@@ -134,6 +134,11 @@ export const mockTmdb = async (page: Page, options: TmdbMockOptions = {}): Promi
 
 export interface TelegramMockOptions {
   fullscreen?: boolean;
+  /**
+   * An older client where requestFullscreen does not exist: the app must stay
+   * usable in Telegram chrome instead of assuming the request succeeds.
+   */
+  fullscreenSupported?: boolean;
   /** Device safe-area inset (status bar / home indicator). */
   safeAreaTop?: number;
   safeAreaBottom?: number;
@@ -183,15 +188,18 @@ export const mockTelegram = async (
       },
       ready: () => calls.push('ready'),
       expand: () => calls.push('expand'),
-      requestFullscreen: () => {
-        calls.push('requestFullscreen');
-        webApp.isFullscreen = true;
-        (listeners.get('fullscreenChanged') ?? []).forEach((handler) => handler());
-      },
+      requestFullscreen:
+        config.fullscreenSupported === false
+          ? undefined
+          : () => {
+              calls.push('requestFullscreen');
+              webApp.isFullscreen = true;
+              (listeners.get('fullscreenChanged') ?? []).forEach((handler) => handler());
+            },
       exitFullscreen: () => {
         webApp.isFullscreen = false;
       },
-      isVersionAtLeast: () => true,
+      isVersionAtLeast: () => config.fullscreenSupported !== false,
       setHeaderColor: () => {},
       setBackgroundColor: () => {},
       setBottomBarColor: () => {},

@@ -78,3 +78,26 @@ export const OfflineIcon = () => (
     <path d="m4 4 16 16" />
   </svg>
 );
+
+export const MenuIcon = () => (
+  <svg viewBox="0 0 24 24" {...stroke}>
+    <circle cx="12" cy="5.5" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="18.5" r="1.4" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const GridIcon = () => (
+  <svg viewBox="0 0 24 24" {...stroke}>
+    <rect x="4" y="4" width="6.4" height="6.4" rx="1.6" />
+    <rect x="13.6" y="4" width="6.4" height="6.4" rx="1.6" />
+    <rect x="4" y="13.6" width="6.4" height="6.4" rx="1.6" />
+    <rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.6" />
+  </svg>
+);
+
+export const ListIcon = () => (
+  <svg viewBox="0 0 24 24" {...stroke}>
+    <path d="M4 6.5h16M4 12h16M4 17.5h16" />
+  </svg>
+);

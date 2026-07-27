@@ -1,0 +1,89 @@
+.breakdown {
+  width: 100%;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--touch-min);
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+}
+
+.chevron {
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 240ms var(--ease-standard);
+}
+
+.chevron[data-open] {
+  transform: rotate(-135deg) translate(-1px, -1px);
+}
+
+/* Layout animation without display:none — the CTA below stays still. */
+.wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 260ms var(--ease-standard);
+}
+
+.wrapper[data-open] {
+  grid-template-rows: 1fr;
+}
+
+.inner {
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 200ms linear;
+}
+
+.wrapper[data-open] .inner {
+  opacity: 1;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 var(--space-1);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.name {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+  min-width: 0;
+}
+
+.value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.number {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrapper,
+  .inner,
+  .chevron {
+    transition: none;
+  }
+}

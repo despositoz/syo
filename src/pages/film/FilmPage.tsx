@@ -25,6 +25,8 @@ import { FilmTitleGroup } from './components/FilmTitleGroup';
 import { FilmActionRow } from './components/FilmActionRow';
 import { FilmDetails } from './components/FilmDetails';
 import { FilmCast } from './components/FilmCast';
+import { useRatingStore, draftMatchesFilm } from '@features/rating/model/rating.store';
+import { useJournalStore } from '@features/journal/model/journal.store';
 import { prepareFilmPresentationCached, type FilmPresentation } from './film.presentation';
 import { takeFilmOpening } from './filmOpening';
 import styles from './FilmPage.module.css';
@@ -189,6 +191,26 @@ export const FilmPage = ({ filmId, initialTitle }: FilmPageProps) => {
     });
   }, [film, toggleWatchlist, haptics, showSnackbar]);
 
+  /*
+   * The CTA is the only entrance to the rating flow. Its label states what
+   * will actually happen: continue an unfinished draft, change a saved
+   * rating, or start a new one.
+   */
+  const draft = useRatingStore((state) => state.draft);
+  const savedEntry = useJournalStore((state) =>
+    state.entries.find((entry) => entry.filmId === filmId),
+  );
+  const hasOwnDraft = draftMatchesFilm(draft, filmId);
+  const ctaLabel = hasOwnDraft
+    ? 'Продолжить оценку'
+    : savedEntry
+      ? 'Изменить оценку'
+      : 'Начать оценку';
+
+  const onRate = useCallback(() => {
+    navigation.openRating({ kind: 'rateMode', filmId });
+  }, [navigation, filmId]);
+
   /* --- render ------------------------------------------------------------ */
 
   if (!film && isError) {
@@ -280,7 +302,8 @@ export const FilmPage = ({ filmId, initialTitle }: FilmPageProps) => {
             ref={actionRowRef}
             accent={view.accent}
             inWatchlist={inWatchlist}
-            onRate={() => showSnackbar('Оценка появится в следующей версии')}
+            onRate={onRate}
+            ctaLabel={ctaLabel}
             onToggleWatchlist={onToggleWatchlist}
           />
 

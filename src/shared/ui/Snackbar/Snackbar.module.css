@@ -12,7 +12,16 @@
 }
 
 .snackbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   max-width: 480px;
+  /*
+   * The region ignores pointer events so it never blocks the screen beneath;
+   * the bar itself must take them back, otherwise its action (Undo) is
+   * unclickable.
+   */
+  pointer-events: auto;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-lg);
   background: rgba(24, 20, 22, 0.92);
@@ -39,4 +48,19 @@
   .snackbar {
     animation: none;
   }
+}
+
+.text {
+  min-width: 0;
+}
+
+/* Undo and friends: a single action, never a row of buttons. */
+.action {
+  flex: 0 0 auto;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-2);
+  margin: calc(var(--space-2) * -1) calc(var(--space-1) * -1);
+  font-size: 0.9375rem;
+  font-weight: 620;
+  color: var(--color-accent-text);
 }

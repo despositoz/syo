@@ -1,0 +1,130 @@
+.page {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+}
+
+.scroll {
+  height: 100%;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: calc(var(--content-safe-top) + var(--space-4))
+    calc(var(--content-safe-right) + var(--space-4))
+    /* Clear of the floating bottom bar and the home indicator. */
+    calc(var(--safe-bottom) + 132px) calc(var(--content-safe-left) + var(--space-4));
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 6vw, 1.75rem);
+  font-weight: 660;
+  letter-spacing: -0.02em;
+}
+
+.viewToggle {
+  display: flex;
+  gap: var(--space-1);
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+}
+
+.viewButton {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-tertiary);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.viewButton[aria-pressed='true'] {
+  background: var(--color-surface-strong);
+  color: var(--color-text);
+}
+
+.viewButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sectionTitle {
+  margin-bottom: var(--space-3);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.items[data-view='grid'] {
+  display: grid;
+  /* Three columns on a normal phone, two when the text is scaled up. */
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-3);
+}
+
+.items[data-view='list'] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.watchlist {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.watchlist::-webkit-scrollbar {
+  display: none;
+}
+
+.watchlistItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 84px;
+  text-align: left;
+}
+
+.watchlistTitle {
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-8) 0;
+}
+
+.emptyTitle {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 640;
+  letter-spacing: -0.015em;
+}
+
+.emptyText {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+}

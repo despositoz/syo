@@ -456,11 +456,44 @@ export class TelegramController {
     this.win.dispatchEvent(new CustomEvent('syo:telegram-theme', { detail: this.state }));
   }
 
+  /**
+   * Publishes only when something actually changed.
+   *
+   * sync() runs on focusin/focusout among other things, and it builds a fresh
+   * state object every time. Emitting that unconditionally re-rendered every
+   * subscriber on each focus change — and a dialog that moves focus on mount
+   * then turned into an endless render loop. Equal state is now a no-op.
+   */
   private publish(next: TelegramState): void {
+    if (sameTelegramState(this.state, next)) return;
     this.state = next;
     this.listeners.forEach((listener) => listener(next));
   }
 }
+
+const sameInsets = (left: TelegramInsets, right: TelegramInsets): boolean =>
+  left.top === right.top &&
+  left.right === right.right &&
+  left.bottom === right.bottom &&
+  left.left === right.left;
+
+const sameTelegramState = (left: TelegramState, right: TelegramState): boolean =>
+  left.inTelegram === right.inTelegram &&
+  left.version === right.version &&
+  left.platform === right.platform &&
+  left.fullscreen === right.fullscreen &&
+  left.isFullscreen === right.isFullscreen &&
+  left.chromeMode === right.chromeMode &&
+  left.colorScheme === right.colorScheme &&
+  left.viewportHeight === right.viewportHeight &&
+  left.viewportStableHeight === right.viewportStableHeight &&
+  left.isExpanded === right.isExpanded &&
+  left.keyboardHeight === right.keyboardHeight &&
+  left.hapticsAvailable === right.hapticsAvailable &&
+  left.backButtonVisible === right.backButtonVisible &&
+  left.trail === right.trail &&
+  sameInsets(left.safeArea, right.safeArea) &&
+  sameInsets(left.contentSafeArea, right.contentSafeArea);
 
 /** Old Telegram clients throw on unsupported methods; never break the app for it. */
 const safeCall = (action: () => unknown): boolean => {

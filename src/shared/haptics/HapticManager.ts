@@ -12,7 +12,15 @@ export type HapticEvent =
   | 'bookmarkRemove'
   | 'pullThreshold'
   | 'refreshNewContent'
-  | 'criticalError';
+  | 'criticalError'
+  /* --- rating flow (spec §10) --- */
+  | 'ratingStep'
+  | 'ratingMaximum'
+  | 'aspectAdvance'
+  | 'ratingSaved'
+  | 'entryDeleted'
+  | 'entryRestored'
+  | 'storageWarning';
 
 export interface HapticDriver {
   impact: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => boolean;
@@ -35,10 +43,22 @@ const PATTERNS: Record<HapticEvent, Pattern> = {
   pullThreshold: { type: 'impact', style: 'soft' },
   refreshNewContent: { type: 'notification', style: 'success' },
   criticalError: { type: 'notification', style: 'error' },
+  ratingStep: { type: 'selection' },
+  ratingMaximum: { type: 'impact', style: 'soft' },
+  aspectAdvance: { type: 'selection' },
+  ratingSaved: { type: 'notification', style: 'success' },
+  entryDeleted: { type: 'impact', style: 'medium' },
+  entryRestored: { type: 'impact', style: 'light' },
+  storageWarning: { type: 'notification', style: 'warning' },
 };
 
-/** Per-event cooldown, ms. Anything faster reads as buzzing, not feedback. */
+/**
+ * Per-event cooldown, ms. Anything faster reads as buzzing, not feedback.
+ * A star step needs a shorter floor than the rest: a deliberate drag across
+ * the scale should still tick, while a fast flick skips the in-between values.
+ */
 const EVENT_COOLDOWN_MS = 120;
+const STEP_COOLDOWN_MS = 50;
 /** Global floor between any two haptics. */
 const GLOBAL_COOLDOWN_MS = 40;
 /** Identical event + payload inside this window is a duplicate projection. */
@@ -79,7 +99,8 @@ export class HapticManager {
     if (this.lastSignature && this.lastSignature.key === signature) {
       if (now - this.lastSignature.at < DEDUPE_WINDOW_MS) return false;
     }
-    if (now - (this.lastEventAt.get(event) ?? -Infinity) < EVENT_COOLDOWN_MS) return false;
+    const cooldown = event === 'ratingStep' ? STEP_COOLDOWN_MS : EVENT_COOLDOWN_MS;
+    if (now - (this.lastEventAt.get(event) ?? -Infinity) < cooldown) return false;
     if (now - this.lastGlobalAt < GLOBAL_COOLDOWN_MS) return false;
 
     const pattern = PATTERNS[event];

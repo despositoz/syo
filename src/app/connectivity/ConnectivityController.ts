@@ -3,6 +3,7 @@ import {
   watchlistRepository,
   type WatchlistRepository,
 } from '@entities/watchlist/watchlist.repository';
+import type { SyncTask } from '@shared/storage/db';
 
 /**
  * Connectivity is *not* a permanent banner (spec §24). The store exposes just
@@ -38,7 +39,7 @@ const SLOW_SYNC_MS = 2500;
  * v1 has no SYO backend yet, so the transport is an explicit no-op that
  * confirms the task. Swapping in a real endpoint touches only `transport`.
  */
-export type SyncTransport = (task: { type: string; filmId: number }) => Promise<void>;
+export type SyncTransport = (task: SyncTask) => Promise<void>;
 
 const noopTransport: SyncTransport = async () => {};
 
@@ -96,7 +97,7 @@ export class ConnectivityController {
     let failed = 0;
     for (const task of tasks) {
       try {
-        await this.transport({ type: task.task.type, filmId: task.task.filmId });
+        await this.transport(task.task);
         await this.repository.completeTask(task.id);
       } catch {
         failed += 1;

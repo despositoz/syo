@@ -9,6 +9,8 @@ export interface FilmActionRowProps {
   inWatchlist: boolean;
   onRate: () => void;
   onToggleWatchlist: () => void;
+  /** States what the CTA will do: start, continue or change a rating. */
+  ctaLabel?: string;
 }
 
 /**
@@ -19,7 +21,7 @@ export interface FilmActionRowProps {
  * toolbar bookmark only appears once this row leaves the viewport (spec §16).
  */
 export const FilmActionRow = forwardRef<HTMLDivElement, FilmActionRowProps>(
-  function FilmActionRow({ accent, inWatchlist, onRate, onToggleWatchlist }, ref) {
+  function FilmActionRow({ accent, inWatchlist, onRate, onToggleWatchlist, ctaLabel = 'Начать оценку' }, ref) {
     return (
       <div
         className={styles.row}
@@ -30,8 +32,8 @@ export const FilmActionRow = forwardRef<HTMLDivElement, FilmActionRowProps>(
           One line only. A CTA that advertises its own unfinished state inside
           the button reads as a demo; the status belongs in the snackbar.
         */}
-        <button type="button" className={styles.primary} onClick={onRate}>
-          Начать оценку
+        <button type="button" className={styles.primary} onClick={onRate} data-testid="film-rate">
+          {ctaLabel}
         </button>
 
         <button

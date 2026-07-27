@@ -8,6 +8,8 @@ import { PerformanceController } from './performance/PerformanceController';
 import { ConnectivityController } from './connectivity/ConnectivityController';
 import { HapticManager, type HapticDriver } from '@shared/haptics/HapticManager';
 import { useWatchlistStore } from '@entities/watchlist/watchlist.store';
+import { useRatingStore } from '@features/rating/model/rating.store';
+import { useJournalStore } from '@features/journal/model/journal.store';
 
 const createQueryClient = () =>
   new QueryClient({
@@ -57,8 +59,26 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
     connectivity.start();
 
     void useWatchlistStore.getState().hydrate();
+    // The active draft and the diary are local data: they must be on screen
+    // before any network call is even considered (spec §24, §21).
+    void useRatingStore.getState().hydrate();
+    void useJournalStore.getState().hydrate();
+
+    /*
+     * A WebView can be killed without warning. Every domain commit already
+     * wrote the synchronous mirror; this is the best-effort flush of whatever
+     * IndexedDB write was still in flight (spec §20.10).
+     */
+    const flush = () => void useRatingStore.getState().flush();
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
       services.navigation.destroy();
       performance.destroy();
       connectivity.destroy();

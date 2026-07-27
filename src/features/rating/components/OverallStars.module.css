@@ -1,0 +1,77 @@
+.overall {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* The compact overall sits in a tight header row: it must never wrap. */
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.overall[data-size='large'] {
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.label {
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+}
+
+.stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  /* Confidence rises as aspects come in — supporting signal, not the only one. */
+  opacity: var(--overall-confidence, 1);
+  transition: opacity 220ms var(--ease-standard);
+}
+
+.overall[data-size='large'] .stars {
+  gap: var(--space-2);
+}
+
+.shape {
+  width: 16px;
+  height: 16px;
+  overflow: visible;
+}
+
+.overall[data-size='large'] .shape {
+  width: clamp(34px, 11vw, 46px);
+  height: clamp(34px, 11vw, 46px);
+}
+
+.shape :global(.star-outline) {
+  fill: none;
+  stroke: var(--color-text-tertiary);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.shape :global(.star-fill) {
+  fill: var(--color-text-on-media);
+}
+
+.number {
+  flex: 0 0 auto;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.overall[data-size='large'] .number {
+  font-size: 1.0625rem;
+}
+
+.progress {
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stars {
+    transition: none;
+  }
+}
