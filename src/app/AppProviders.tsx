@@ -9,7 +9,7 @@ import { ConnectivityController } from './connectivity/ConnectivityController';
 import { HapticManager, type HapticDriver } from '@shared/haptics/HapticManager';
 import { useWatchlistStore } from '@entities/watchlist/watchlist.store';
 import { useRatingStore } from '@features/rating/model/rating.store';
-import { useJournalStore } from '@features/journal/model/journal.store';
+import { useDiaryStore } from '@features/diary/model/diary.store';
 
 const createQueryClient = () =>
   new QueryClient({
@@ -62,7 +62,7 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
     // The active draft and the diary are local data: they must be on screen
     // before any network call is even considered (spec §24, §21).
     void useRatingStore.getState().hydrate();
-    void useJournalStore.getState().hydrate();
+    void useDiaryStore.getState().hydrate();
 
     /*
      * A WebView can be killed without warning. Every domain commit already

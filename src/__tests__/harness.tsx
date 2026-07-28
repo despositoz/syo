@@ -9,7 +9,7 @@ import { useThemeStore } from '@app/theme/themeStore';
 import { useSnackbarStore } from '@shared/ui/Snackbar/snackbarStore';
 import { clearFilmMemoryCache } from '@entities/film/film.cache';
 import { useRatingStore } from '@features/rating/model/rating.store';
-import { useJournalStore } from '@features/journal/model/journal.store';
+import { useDiaryStore } from '@features/diary/model/diary.store';
 import { db } from '@shared/storage/db';
 import type { TelegramWebApp } from '@app/telegram/telegramTypes';
 
@@ -222,7 +222,7 @@ export const resetAppState = async (): Promise<void> => {
   });
   useWatchlistStore.setState({ entries: {}, hydrated: false });
   useRatingStore.setState({ draft: null, hydrated: false, storageError: null });
-  useJournalStore.setState({ entries: [], hydrated: false, view: 'grid', highlightedId: null });
+  useDiaryStore.setState({ entries: [], hydrated: false, view: 'grid', highlightedId: null });
   useThemeStore.setState({ preference: 'cinema', colorScheme: 'dark', resolved: 'cinema' });
   useSnackbarStore.setState({ current: null });
   clearFilmMemoryCache();
@@ -233,7 +233,7 @@ export const resetAppState = async (): Promise<void> => {
   await db.preferences.clear();
   await db.syncQueue.clear();
   await db.ratingDrafts.clear();
-  await db.journal.clear();
+  await db.diaryEntries.clear();
   localStorage.clear();
   window.history.replaceState({}, '', '/');
 };

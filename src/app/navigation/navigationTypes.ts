@@ -1,5 +1,3 @@
-import type { RatingAspectId } from '@domain/rating/rating.types';
-
 export type RootTab = 'feed' | 'diary' | 'profile';
 
 export interface FilmRouteParams {
@@ -15,7 +13,7 @@ export interface FilmRouteParams {
 export type RatingRoute =
   | { kind: 'rateMode'; filmId: number }
   | { kind: 'rateQuick'; filmId: number }
-  | { kind: 'rateAspect'; filmId: number; aspectId: RatingAspectId }
+  | { kind: 'rateDeep'; filmId: number; step: number }
   | { kind: 'rateResult'; filmId: number };
 
 export type Route =
@@ -23,7 +21,7 @@ export type Route =
   | { kind: 'picker' }
   | ({ kind: 'film' } & FilmRouteParams)
   | RatingRoute
-  | { kind: 'journalEntry'; entryId: string };
+  | { kind: 'diaryEntry'; entryId: string };
 
 export type RouteKind = Route['kind'];
 
@@ -45,7 +43,7 @@ export const isRootRoute = (route: Route): route is { kind: 'root'; tab: RootTab
 export const isRatingRoute = (route: Route): route is RatingRoute =>
   route.kind === 'rateMode' ||
   route.kind === 'rateQuick' ||
-  route.kind === 'rateAspect' ||
+  route.kind === 'rateDeep' ||
   route.kind === 'rateResult';
 
 export const routeKey = (route: Route): string => {
@@ -60,13 +58,13 @@ export const routeKey = (route: Route): string => {
       return `rate:${route.filmId}:mode`;
     case 'rateQuick':
       return `rate:${route.filmId}:quick`;
-    case 'rateAspect':
-      // Aspects share one key: moving between them is an internal transition,
-      // not a page change, so the panel is not remounted.
-      return `rate:${route.filmId}:aspect`;
+    case 'rateDeep':
+      // The five steps share one key: moving between them is an internal
+      // transition, not a page change, so the panel is not remounted.
+      return `rate:${route.filmId}:deep`;
     case 'rateResult':
       return `rate:${route.filmId}:result`;
-    case 'journalEntry':
-      return `journal:${route.entryId}`;
+    case 'diaryEntry':
+      return `diary:${route.entryId}`;
   }
 };

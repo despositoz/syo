@@ -2,7 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import type { Film, FilmSummary } from '@entities/film/film.model';
 import type { WatchlistEntry } from '@entities/watchlist/watchlist.model';
 import type { RatingDraft } from '@domain/rating/rating.types';
-import type { JournalEntry } from '@domain/journal/journal.types';
+import type { DiaryEntry } from '@domain/diary/diary.types';
 
 export interface FilmCacheRow {
   id: number;
@@ -32,8 +32,8 @@ export interface PreferenceRow {
 export type SyncTask =
   | { type: 'watchlistAdd'; filmId: number }
   | { type: 'watchlistRemove'; filmId: number }
-  | { type: 'journalUpsert'; entryId: string; clientMutationId: string; revision: number }
-  | { type: 'journalDelete'; entryId: string; clientMutationId: string; revision: number };
+  | { type: 'diaryUpsert'; entryId: string; clientMutationId: string; revision: number }
+  | { type: 'diaryDelete'; entryId: string; clientMutationId: string; revision: number };
 
 export interface SyncQueueRow {
   id?: number;
@@ -55,9 +55,9 @@ export class SyoDatabase extends Dexie {
   watchlist!: Table<WatchlistEntry, number>;
   preferences!: Table<PreferenceRow, string>;
   syncQueue!: Table<SyncQueueRow, number>;
-  /** Exactly one row, keyed 'active' — the single in-flight rating draft. */
+  /** At most one row with status 'active' — the single in-flight draft. */
   ratingDrafts!: Table<RatingDraft, string>;
-  journal!: Table<JournalEntry, string>;
+  diaryEntries!: Table<DiaryEntry, string>;
 
   constructor(name = 'syo') {
     super(name);
@@ -83,8 +83,83 @@ export class SyoDatabase extends Dexie {
       ratingDrafts: 'id, updatedAt',
       journal: 'id, filmId, createdAt, deletedAt, syncStatus',
     });
+
+    /*
+     * v3 moves the diary to its own store with the indexes the Diary actually
+     * queries (spec §6), and retires the v2 `journal` store.
+     *
+     * The old rows are carried across rather than dropped: the scale changed
+     * from 0-5 with halves to 1-5 whole, so a 0 or a 4.5 is clamped and rounded
+     * into the new scale. Losing someone's ratings to a schema change would be
+     * the worst possible outcome of a rename.
+     */
+    this.version(3)
+      .stores({
+        diaryEntries: 'id, filmId, createdAt, watchedAt, updatedAt, deletedAt, syncStatus',
+        journal: null,
+      })
+      .upgrade(async (tx) => {
+        const legacy = await tx.table('journal').toArray();
+        if (!legacy.length) return;
+        const migrated = legacy.map(migrateLegacyEntry).filter((row): row is DiaryEntry => !!row);
+        await tx.table('diaryEntries').bulkPut(migrated);
+      });
   }
 }
+
+/** Maps a v2 journal row onto the v3 diary shape. */
+const migrateLegacyEntry = (row: Record<string, unknown>): DiaryEntry | null => {
+  const filmId = Number(row.filmId);
+  if (!Number.isFinite(filmId) || filmId <= 0) return null;
+
+  const film = (row.film ?? {}) as Record<string, unknown>;
+  const raw = Number(row.rawScore ?? row.displayScore ?? 0);
+  // 0-5 with halves → 1-5 whole.
+  const overall = Math.min(5, Math.max(1, Math.round(raw))) as DiaryEntry['overallRating'];
+  const aspects = (row.aspects ?? null) as DiaryEntry['aspects'] | null;
+  const deep = row.mode === 'detailed' || row.mode === 'deep';
+  // The v2 aspect ids differ from v3's, so read them as a loose bag.
+  const legacyAspects = (aspects ?? {}) as Record<string, unknown>;
+  const timestamp = typeof row.createdAt === 'string' ? row.createdAt : new Date().toISOString();
+
+  return {
+    id: String(row.id ?? `${filmId}`),
+    filmId,
+    filmTitle: String(film.title ?? row.filmTitle ?? 'Без названия'),
+    posterPath: typeof film.posterPath === 'string' ? film.posterPath : null,
+    releaseYear: film.releaseYear ? String(film.releaseYear) : null,
+    mode: deep ? 'deep' : 'quick',
+    overallRating: overall,
+    preciseRating: Math.min(5, Math.max(1, raw || overall)),
+    // Aspect ids changed too, so only a complete deep set is worth keeping.
+    aspects:
+      deep && aspects
+        ? {
+            story: clampLegacy(legacyAspects.story),
+            characters: clampLegacy(legacyAspects.performance),
+            direction: clampLegacy(legacyAspects.directionVisual),
+            sound: clampLegacy(legacyAspects.soundMusic),
+            aftertaste: clampLegacy(legacyAspects.aftertaste),
+          }
+        : { story: null, characters: null, direction: null, sound: null, aftertaste: null },
+    hasText: false,
+    text: null,
+    watchedAt: typeof row.updatedAt === 'string' ? row.updatedAt : timestamp,
+    createdAt: timestamp,
+    updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : timestamp,
+    clientMutationId: String(row.clientMutationId ?? `${row.id}`),
+    revision: Number(row.revision ?? 1),
+    syncStatus: 'local',
+    deletedAt: typeof row.deletedAt === 'string' ? row.deletedAt : null,
+  };
+};
+
+/** A legacy 0 becomes 1: the old scale's zero has no home in 1-5. */
+const clampLegacy = (value: unknown): DiaryEntry['overallRating'] | null => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return null;
+  return Math.min(5, Math.max(1, Math.round(number))) as DiaryEntry['overallRating'];
+};
 
 export const db = new SyoDatabase();
 

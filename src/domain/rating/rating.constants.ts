@@ -1,77 +1,73 @@
 import type { RatingAspectId, RatingValue } from './rating.types';
 
 /**
- * All user-facing rating copy (spec §4, §7.4, §11.4).
+ * Every word the rating flow says (spec §10, §15, §17-21, §27).
  *
- * The word "критерий" never appears in the UI: aspects are named, not numbered.
+ * The tone describes the user's own reaction, never the film's objective
+ * quality: no verdicts, no memes, no "шедевр".
  */
 
 export interface RatingAspect {
   id: RatingAspectId;
-  /** Screen title. */
-  name: string;
-  question: string;
-  /** Extremes shown under the stars. */
+  /** The question that heads the step. */
+  title: string;
+  /** One supporting line under it. */
+  subtitle: string;
   lowLabel: string;
   highLabel: string;
-  /** Word for each value 0-5, indexed by value. */
-  states: readonly [string, string, string, string, string, string];
+  /** Short name for the progress markers and the breakdown list. */
+  shortName: string;
 }
 
-/** Fixed order. Exactly five — no sixth step, no manual overall. */
+/** Fixed order — exactly five steps, never shown together. */
 export const RATING_ASPECTS: readonly RatingAspect[] = [
   {
     id: 'story',
-    name: 'Сюжет',
-    question: 'Насколько история держала тебя внутри фильма?',
-    lowLabel: 'Рассыпался',
-    highLabel: 'Не отпускал',
-    states: ['Рассыпался', 'Потерял меня', 'Местами', 'Держал', 'Захватил', 'Не отпускал'],
+    shortName: 'Сюжет',
+    title: 'Как сработала история?',
+    subtitle: 'Ритм, логика и то, насколько хотелось следить дальше',
+    lowLabel: 'Не увлекло',
+    highLabel: 'Захватило',
   },
   {
-    id: 'performance',
-    name: 'Герои и актёрская игра',
-    question: 'Насколько ты поверил героям и тем, кто их сыграл?',
+    id: 'characters',
+    shortName: 'Герои',
+    title: 'Как тебе герои и актёрская игра?',
+    subtitle: 'Насколько им верилось и хотелось за ними следить',
     lowLabel: 'Не поверил',
-    highLabel: 'Жил вместе с ними',
-    states: ['Не поверил', 'Плоско', 'Неровно', 'Живо', 'Очень точно', 'Жил вместе с ними'],
+    highLabel: 'Очень живые',
   },
   {
-    id: 'directionVisual',
-    name: 'Режиссура и визуал',
-    question: 'Насколько форма фильма работала на впечатление?',
-    lowLabel: 'Без лица',
-    highLabel: 'Не оторваться',
-    states: ['Без лица', 'Случайно', 'Местами', 'Выразительно', 'Завораживает', 'Не оторваться'],
+    id: 'direction',
+    shortName: 'Режиссура',
+    title: 'Как фильм был сделан?',
+    subtitle: 'Режиссура, кадр, атмосфера и визуальный язык',
+    lowLabel: 'Не сработало',
+    highLabel: 'Впечатлило',
   },
   {
-    id: 'soundMusic',
-    name: 'Звук и музыка',
-    question: 'Насколько звук усиливал то, что происходило?',
-    lowLabel: 'Не заметил',
-    highLabel: 'Пробирал',
-    states: ['Мимо', 'Слабо', 'Заметно', 'Работает', 'Пробирает', 'Осталось в теле'],
+    id: 'sound',
+    shortName: 'Звук',
+    title: 'Что сделал звук?',
+    subtitle: 'Музыка, тишина, голос и общее звучание',
+    lowLabel: 'Не запомнился',
+    highLabel: 'Сильно повлиял',
   },
   {
     id: 'aftertaste',
-    name: 'Что осталось',
-    question: 'Насколько фильм продолжает жить в тебе после финала?',
-    lowLabel: 'Ничего',
+    shortName: 'Послевкусие',
+    title: 'Что осталось после фильма?',
+    subtitle: 'Мысли, эмоции и желание вернуться к нему',
+    lowLabel: 'Почти ничего',
     highLabel: 'Не отпускает',
-    states: [
-      'Ничего',
-      'Почти ничего',
-      'Что-то осталось',
-      'Зацепило',
-      'Не отпускает',
-      'Засело надолго',
-    ],
   },
 ] as const;
 
 export const ASPECT_IDS: readonly RatingAspectId[] = RATING_ASPECTS.map((aspect) => aspect.id);
 
-export const ASPECT_COUNT = RATING_ASPECTS.length;
+export const DEEP_STEP_COUNT = RATING_ASPECTS.length;
+
+export const aspectAtStep = (step: number): RatingAspect | undefined => RATING_ASPECTS[step];
 
 export const aspectById = (id: RatingAspectId): RatingAspect => {
   const aspect = RATING_ASPECTS.find((item) => item.id === id);
@@ -79,47 +75,48 @@ export const aspectById = (id: RatingAspectId): RatingAspect => {
   return aspect;
 };
 
-export const aspectIndex = (id: RatingAspectId): number => ASPECT_IDS.indexOf(id);
+export const stepOfAspect = (id: RatingAspectId): number => ASPECT_IDS.indexOf(id);
 
 export const isRatingAspectId = (value: string): value is RatingAspectId =>
   (ASPECT_IDS as readonly string[]).includes(value);
 
-/** Words for the single quick score. */
-export const QUICK_STATES: readonly [string, string, string, string, string, string] = [
-  'Совсем не сработало',
-  'Не твоё',
-  'Слабо',
-  'Хорошо',
-  'Сильное впечатление',
-  'Останется надолго',
-];
+/** Live reaction under the stars in quick mode (spec §15). */
+const QUICK_REACTIONS: Record<RatingValue, string> = {
+  1: 'Совсем не твоё',
+  2: 'Скорее не понравилось',
+  3: 'Нормально',
+  4: 'Очень понравилось',
+  5: 'Останется с тобой',
+};
 
-/** Shown before any deliberate action — never a placeholder value. */
-export const UNRATED_LABEL = 'Проведи по звёздам';
+export const quickReaction = (value: RatingValue | null): string =>
+  value === null ? '' : QUICK_REACTIONS[value];
 
-/**
- * Phrase for a final score, keyed by displayScore (0.5 steps).
- * Never judges the user: no "правильная оценка", no comparison to TMDB.
- */
-const RESULT_PHRASES: ReadonlyMap<number, string> = new Map([
-  [0, 'Совсем не сработало'],
-  [0.5, 'Не твоё'],
-  [1, 'Не твоё'],
-  [1.5, 'Слабо'],
-  [2, 'Слабо'],
-  [2.5, 'Смешанные чувства'],
-  [3, 'Хорошее впечатление'],
-  [3.5, 'Сильное впечатление'],
-  [4, 'Очень сильно'],
-  [4.5, 'Почти идеально'],
-  [5, 'Останется надолго'],
-]);
+/** Closing line on the result page (spec §27). */
+const RESULT_PHRASES: Record<RatingValue, string> = {
+  1: 'Этот фильм совсем не сработал для тебя',
+  2: 'В нём оказалось больше разочарования, чем удовольствия',
+  3: 'Что-то сработало, но не всё',
+  4: 'Фильм действительно тебе понравился',
+  5: 'Похоже, это важный для тебя фильм',
+};
 
-export const resultPhrase = (displayScore: number): string =>
-  RESULT_PHRASES.get(displayScore) ?? RESULT_PHRASES.get(Math.round(displayScore * 2) / 2) ?? '';
+export const resultPhrase = (overall: RatingValue): string => RESULT_PHRASES[overall];
 
-export const quickStateLabel = (value: RatingValue | null): string =>
-  value === null ? UNRATED_LABEL : QUICK_STATES[value];
+export const MODE_LABELS = {
+  quick: {
+    title: 'Быстро',
+    description: 'Поставить общую оценку',
+    duration: 'Несколько секунд',
+  },
+  deep: {
+    title: 'Разобрать впечатление',
+    description: 'Пройтись по пяти сторонам фильма',
+    duration: 'Около минуты',
+  },
+} as const;
 
-export const aspectStateLabel = (id: RatingAspectId, value: RatingValue | null): string =>
-  value === null ? UNRATED_LABEL : aspectById(id).states[value];
+export const MODE_QUESTION = 'Как хочешь оценить фильм?';
+export const QUICK_QUESTION = 'Как тебе фильм в целом?';
+/** Label above the running total during the deep flow (spec §25). */
+export const CURRENT_TOTAL_LABEL = 'Сейчас';

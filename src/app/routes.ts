@@ -1,4 +1,4 @@
-import { isRatingAspectId } from '@domain/rating/rating.constants';
+import { DEEP_STEP_COUNT } from '@domain/rating/rating.constants';
 import type { Route, RootTab } from './navigation/navigationTypes';
 
 export const ROOT_TABS: readonly RootTab[] = ['feed', 'diary', 'profile'] as const;
@@ -34,12 +34,12 @@ const relativePath = (route: Route): string => {
       return `/rate/${route.filmId}/mode`;
     case 'rateQuick':
       return `/rate/${route.filmId}/quick`;
-    case 'rateAspect':
-      return `/rate/${route.filmId}/aspects/${route.aspectId}`;
+    case 'rateDeep':
+      return `/rate/${route.filmId}/deep/${route.step + 1}`;
     case 'rateResult':
       return `/rate/${route.filmId}/result`;
-    case 'journalEntry':
-      return `/journal/${route.entryId}`;
+    case 'diaryEntry':
+      return `/diary/${route.entryId}`;
   }
 };
 
@@ -66,11 +66,14 @@ export const pathToStack = (pathname: string): Route[] => {
   const [first, second, third, fourth] = segments;
 
   if (!first) return [feedRoot];
-  if (isRootTab(first)) return [{ kind: 'root', tab: first }];
 
-  if (first === 'journal' && second) {
-    return [diaryRoot, { kind: 'journalEntry', entryId: second }];
+  // Checked before the root-tab match: 'diary' is both a tab and the prefix of
+  // an entry link, and the two-segment form must win.
+  if (first === 'diary' && second) {
+    return [diaryRoot, { kind: 'diaryEntry', entryId: second }];
   }
+
+  if (isRootTab(first)) return [{ kind: 'root', tab: first }];
 
   if (first === 'rate') {
     // Bare /rate is the movie picker; /rate/:filmId/... is the rating flow.
@@ -81,8 +84,12 @@ export const pathToStack = (pathname: string): Route[] => {
 
     if (third === 'quick') return ratingStack(filmId, { kind: 'rateQuick', filmId });
     if (third === 'result') return ratingStack(filmId, { kind: 'rateResult', filmId });
-    if (third === 'aspects' && fourth && isRatingAspectId(fourth)) {
-      return ratingStack(filmId, { kind: 'rateAspect', filmId, aspectId: fourth });
+    if (third === 'deep' && fourth) {
+      // The URL is 1-based; the domain is 0-based.
+      const step = Number(fourth) - 1;
+      if (Number.isInteger(step) && step >= 0 && step < DEEP_STEP_COUNT) {
+        return ratingStack(filmId, { kind: 'rateDeep', filmId, step });
+      }
     }
     return ratingStack(filmId, { kind: 'rateMode', filmId });
   }

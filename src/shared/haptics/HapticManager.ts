@@ -13,13 +13,13 @@ export type HapticEvent =
   | 'pullThreshold'
   | 'refreshNewContent'
   | 'criticalError'
-  /* --- rating flow (spec §10) --- */
-  | 'ratingStep'
-  | 'ratingMaximum'
-  | 'aspectAdvance'
+  /* --- rating flow (spec §31) --- */
+  | 'ratingModeSelect'
+  | 'ratingValueChange'
+  | 'ratingStepComplete'
   | 'ratingSaved'
-  | 'entryDeleted'
-  | 'entryRestored'
+  | 'diaryEntryDeleted'
+  | 'undoDelete'
   | 'storageWarning';
 
 export interface HapticDriver {
@@ -43,12 +43,12 @@ const PATTERNS: Record<HapticEvent, Pattern> = {
   pullThreshold: { type: 'impact', style: 'soft' },
   refreshNewContent: { type: 'notification', style: 'success' },
   criticalError: { type: 'notification', style: 'error' },
-  ratingStep: { type: 'selection' },
-  ratingMaximum: { type: 'impact', style: 'soft' },
-  aspectAdvance: { type: 'selection' },
+  ratingModeSelect: { type: 'selection' },
+  ratingValueChange: { type: 'selection' },
+  ratingStepComplete: { type: 'selection' },
   ratingSaved: { type: 'notification', style: 'success' },
-  entryDeleted: { type: 'impact', style: 'medium' },
-  entryRestored: { type: 'impact', style: 'light' },
+  diaryEntryDeleted: { type: 'impact', style: 'medium' },
+  undoDelete: { type: 'impact', style: 'light' },
   storageWarning: { type: 'notification', style: 'warning' },
 };
 
@@ -99,7 +99,7 @@ export class HapticManager {
     if (this.lastSignature && this.lastSignature.key === signature) {
       if (now - this.lastSignature.at < DEDUPE_WINDOW_MS) return false;
     }
-    const cooldown = event === 'ratingStep' ? STEP_COOLDOWN_MS : EVENT_COOLDOWN_MS;
+    const cooldown = event === 'ratingValueChange' ? STEP_COOLDOWN_MS : EVENT_COOLDOWN_MS;
     if (now - (this.lastEventAt.get(event) ?? -Infinity) < cooldown) return false;
     if (now - this.lastGlobalAt < GLOBAL_COOLDOWN_MS) return false;
 

@@ -1,34 +1,44 @@
-import { ASPECT_IDS, aspectIndex } from './rating.constants';
-import { isComplete } from './rating.calculation';
+import { ASPECT_IDS, DEEP_STEP_COUNT, aspectAtStep } from './rating.constants';
+import { isComplete } from './rating.calculator';
 import { createId } from './rating.validation';
 import {
   emptyAspects,
   type AspectScores,
-  type FilmSnapshot,
   type RatingAspectId,
   type RatingDraft,
+  type RatingFlowState,
   type RatingMode,
   type RatingValue,
 } from './rating.types';
 
 /**
- * Draft state machine (spec §5.3). Pure: every function takes a draft and
- * returns a new one. The current step lives here and in storage — never
- * inferred from the DOM.
+ * Draft state machine (spec §3). Pure: every function takes a draft and returns
+ * a new one. The current step lives here and in storage — never inferred from
+ * the DOM, and never held only in React state.
  *
- *   IDLE → MODE_SELECT → QUICK_EDITING  → QUICK_RESULT    → SAVING → SAVED
- *   IDLE → MODE_SELECT → ASPECT_1..5    → DETAILED_RESULT → SAVING → SAVED
+ *   preparing → chooseMode → quick   → result → saving → saved
+ *   preparing → chooseMode → deepStep(0..4) → result → saving → saved
  */
 
+/** What the flow needs about a film, captured once so it works offline. */
+export interface RatingFilmSummary {
+  filmId: number;
+  filmTitle: string;
+  posterPath: string | null;
+  backdropPath: string | null;
+  releaseYear: string | null;
+  dominantColor?: string | null;
+}
+
 export interface CreateDraftOptions {
-  film: FilmSnapshot;
-  mode: RatingMode;
-  /** Set when editing an existing journal entry. */
+  film: RatingFilmSummary;
+  /** Null until the user picks one on the mode screen. */
+  mode?: RatingMode | null;
+  /** Set when editing an existing diary entry. */
   editingEntryId?: string;
   /** Existing values when editing — real data, not defaults. */
-  quickScore?: RatingValue | null;
+  quickRating?: RatingValue | null;
   aspects?: AspectScores;
-  previousQuickScore?: RatingValue | null;
   now?: () => string;
 }
 
@@ -36,29 +46,28 @@ const nowIso = () => new Date().toISOString();
 
 /**
  * Created only *after* a mode is chosen — opening the selector and leaving
- * must not leave an empty draft behind (spec §12.2).
+ * must not leave an empty draft behind (spec §10).
  */
 export const createDraft = (options: CreateDraftOptions): RatingDraft => {
   const timestamp = (options.now ?? nowIso)();
-  const aspects = options.aspects ?? emptyAspects();
   const draft: RatingDraft = {
-    schemaVersion: 1,
-    id: 'active',
-    draftUuid: createId(),
-    film: options.film,
-    mode: options.mode,
-    quickScore: options.quickScore ?? null,
-    aspects,
-    currentAspect: options.mode === 'detailed' ? (ASPECT_IDS[0] ?? null) : null,
-    currentScreen: options.mode === 'quick' ? 'quick' : 'aspect',
+    id: createId(),
+    filmId: options.film.filmId,
+    filmTitle: options.film.filmTitle,
+    posterPath: options.film.posterPath,
+    backdropPath: options.film.backdropPath,
+    releaseYear: options.film.releaseYear,
+    dominantColor: options.film.dominantColor ?? null,
+    mode: options.mode ?? null,
+    quickRating: options.quickRating ?? null,
+    aspects: options.aspects ?? emptyAspects(),
+    currentStep: 0,
+    status: 'active',
     createdAt: timestamp,
     updatedAt: timestamp,
     revision: 0,
   };
   if (options.editingEntryId) draft.editingEntryId = options.editingEntryId;
-  if (options.previousQuickScore !== undefined && options.previousQuickScore !== null) {
-    draft.previousQuickScore = options.previousQuickScore;
-  }
   return draft;
 };
 
@@ -70,128 +79,118 @@ const advance = (draft: RatingDraft, patch: Partial<RatingDraft>): RatingDraft =
   revision: draft.revision + 1,
 });
 
-export const setQuickScore = (draft: RatingDraft, value: RatingValue): RatingDraft =>
-  advance(draft, { quickScore: value });
+export const setMode = (draft: RatingDraft, mode: RatingMode): RatingDraft =>
+  advance(draft, { mode, currentStep: 0 });
 
-export const setAspectScore = (
+export const setQuickRating = (draft: RatingDraft, value: RatingValue): RatingDraft =>
+  advance(draft, { quickRating: value });
+
+export const setAspectRating = (
   draft: RatingDraft,
   aspectId: RatingAspectId,
   value: RatingValue,
 ): RatingDraft => advance(draft, { aspects: { ...draft.aspects, [aspectId]: value } });
 
-/**
- * Switches a quick draft to the detailed flow, keeping the quick score only as
- * history: it is never fed into the detailed formula (spec §7.5).
- */
-export const upgradeToDetailed = (draft: RatingDraft): RatingDraft =>
-  advance(draft, {
-    mode: 'detailed',
-    previousQuickScore: draft.quickScore,
-    quickScore: null,
-    currentScreen: 'aspect',
-    currentAspect: draft.currentAspect ?? ASPECT_IDS[0] ?? null,
-  });
+/** The aspect a step points at. */
+export const aspectOfStep = (step: number): RatingAspectId | null => aspectAtStep(step)?.id ?? null;
 
-/** First aspect with no value yet — where a resumed draft should land. */
-export const firstIncompleteAspect = (aspects: AspectScores): RatingAspectId | null =>
-  ASPECT_IDS.find((id) => aspects[id] === null) ?? null;
+/** First step with no value yet — where a resumed draft should land. */
+export const firstIncompleteStep = (aspects: AspectScores): number => {
+  const index = ASPECT_IDS.findIndex((id) => aspects[id] === null);
+  return index === -1 ? DEEP_STEP_COUNT - 1 : index;
+};
 
 /**
- * An aspect is reachable if it is completed, or is the first incomplete one.
- * Future aspects stay locked so none can be skipped (spec §8.5).
+ * A step is reachable if it is already answered, or is the first unanswered
+ * one. Future steps stay locked so none can be skipped (spec §22).
  */
-export const canOpenAspect = (draft: RatingDraft, aspectId: RatingAspectId): boolean => {
+export const canOpenStep = (draft: RatingDraft, step: number): boolean => {
+  if (step < 0 || step >= DEEP_STEP_COUNT) return false;
+  const aspectId = aspectOfStep(step);
+  if (!aspectId) return false;
   if (draft.aspects[aspectId] !== null) return true;
-  return firstIncompleteAspect(draft.aspects) === aspectId;
+  return firstIncompleteStep(draft.aspects) === step;
 };
 
-export const goToAspect = (draft: RatingDraft, aspectId: RatingAspectId): RatingDraft => {
-  if (!canOpenAspect(draft, aspectId)) return draft;
-  return advance(draft, { currentAspect: aspectId, currentScreen: 'aspect' });
-};
+export const goToStep = (draft: RatingDraft, step: number): RatingDraft =>
+  canOpenStep(draft, step) ? advance(draft, { currentStep: step }) : draft;
 
-/** Result is reachable only with a confirmed quick score or all five aspects. */
+/** The result is reachable with a quick rating, or with all five aspects. */
 export const canOpenResult = (draft: RatingDraft): boolean =>
-  draft.mode === 'quick' ? draft.quickScore !== null : isComplete(draft.aspects);
+  draft.mode === 'quick' ? draft.quickRating !== null : isComplete(draft.aspects);
 
-export const goToResult = (draft: RatingDraft): RatingDraft =>
-  canOpenResult(draft) ? advance(draft, { currentScreen: 'result' }) : draft;
-
-/**
- * What follows a committed value: the next aspect, or the result once the last
- * one is filled.
- */
-export const nextStep = (draft: RatingDraft): RatingDraft => {
-  if (draft.mode === 'quick') return goToResult(draft);
-  const current = draft.currentAspect;
-  if (!current) return draft;
-
-  const next = ASPECT_IDS[aspectIndex(current) + 1];
-  if (!next) return goToResult(draft);
-  if (draft.aspects[current] === null) return draft; // cannot skip an unrated aspect
-  return advance(draft, { currentAspect: next, currentScreen: 'aspect' });
+/** What follows a committed value: the next step, or the result after the last. */
+export const nextStep = (draft: RatingDraft): number | 'result' => {
+  if (draft.mode === 'quick') return 'result';
+  const aspectId = aspectOfStep(draft.currentStep);
+  // An unanswered step cannot be left behind.
+  if (!aspectId || draft.aspects[aspectId] === null) return draft.currentStep;
+  const next = draft.currentStep + 1;
+  return next >= DEEP_STEP_COUNT ? 'result' : next;
 };
 
 export type BackTarget =
-  | { kind: 'aspect'; aspectId: RatingAspectId }
-  | { kind: 'quick' }
-  | { kind: 'mode' }
-  | { kind: 'film' };
+  { kind: 'step'; step: number } | { kind: 'quick' } | { kind: 'mode' } | { kind: 'film' };
 
 /**
  * Back semantics for both our own control and the Telegram BackButton
- * (spec §20.9). Draft is never destroyed by going back.
+ * (spec §30). Back never destroys the draft.
  */
-export const backTarget = (draft: RatingDraft): BackTarget => {
-  if (draft.currentScreen === 'result') {
-    if (draft.mode === 'quick') return { kind: 'quick' };
-    const last = ASPECT_IDS[ASPECT_IDS.length - 1];
-    return last ? { kind: 'aspect', aspectId: last } : { kind: 'mode' };
+export const backTargetFrom = (
+  draft: RatingDraft,
+  screen: 'mode' | 'quick' | 'deep' | 'result',
+): BackTarget => {
+  if (screen === 'mode') return { kind: 'film' };
+  if (screen === 'quick') return { kind: 'mode' };
+  if (screen === 'result') {
+    return draft.mode === 'quick' ? { kind: 'quick' } : { kind: 'step', step: DEEP_STEP_COUNT - 1 };
   }
-  if (draft.currentScreen === 'quick') return { kind: 'mode' };
-
-  const current = draft.currentAspect;
-  if (!current) return { kind: 'mode' };
-  const previous = ASPECT_IDS[aspectIndex(current) - 1];
-  return previous ? { kind: 'aspect', aspectId: previous } : { kind: 'mode' };
-};
-
-export const goBack = (draft: RatingDraft): RatingDraft => {
-  const target = backTarget(draft);
-  switch (target.kind) {
-    case 'aspect':
-      return advance(draft, { currentAspect: target.aspectId, currentScreen: 'aspect' });
-    case 'quick':
-      return advance(draft, { currentScreen: 'quick' });
-    case 'mode':
-    case 'film':
-      return draft;
-  }
+  return draft.currentStep <= 0 ? { kind: 'mode' } : { kind: 'step', step: draft.currentStep - 1 };
 };
 
 /** True once the user has entered anything worth keeping. */
 export const hasProgress = (draft: RatingDraft): boolean =>
-  draft.quickScore !== null || ASPECT_IDS.some((id) => draft.aspects[id] !== null);
+  draft.quickRating !== null || ASPECT_IDS.some((id) => draft.aspects[id] !== null);
+
+/** Human-readable progress for the conflict sheet and the diary draft card. */
+export const draftProgressLabel = (draft: RatingDraft): string => {
+  if (draft.mode === 'quick') {
+    return draft.quickRating === null ? 'Оценка не выбрана' : 'Осталось сохранить';
+  }
+  if (draft.mode === 'deep') {
+    const done = ASPECT_IDS.filter((id) => draft.aspects[id] !== null).length;
+    return done === DEEP_STEP_COUNT ? 'Осталось сохранить' : `${done} из ${DEEP_STEP_COUNT}`;
+  }
+  return 'Режим не выбран';
+};
+
+export type ResumeTarget =
+  | { screen: 'mode' }
+  | { screen: 'quick' }
+  | { screen: 'deep'; step: number }
+  | { screen: 'result' };
 
 /**
- * Where a restored draft should open. A stored 'result' that is no longer
- * reachable (data lost, older build) falls back to the first gap rather than
- * showing a broken result screen (spec §5.7).
+ * Where a restored draft should open. A draft whose stored step is no longer
+ * supported by its data falls back to the first gap rather than to a broken
+ * screen (spec §41).
  */
-export const resumeTarget = (
-  draft: RatingDraft,
-):
-  | { screen: 'quick' | 'result'; aspectId?: undefined }
-  | { screen: 'aspect'; aspectId: RatingAspectId } => {
-  if (draft.currentScreen === 'result' && canOpenResult(draft)) return { screen: 'result' };
+export const resumeTarget = (draft: RatingDraft): ResumeTarget => {
+  if (!draft.mode) return { screen: 'mode' };
+  // Quick always resumes on its own screen: the value is one tap from there,
+  // and the result is a step forward rather than a place to be dropped into.
   if (draft.mode === 'quick') return { screen: 'quick' };
+  if (isComplete(draft.aspects)) return { screen: 'result' };
+  const step = canOpenStep(draft, draft.currentStep)
+    ? draft.currentStep
+    : firstIncompleteStep(draft.aspects);
+  return { screen: 'deep', step };
+};
 
-  const aspectId =
-    (draft.currentAspect && canOpenAspect(draft, draft.currentAspect)
-      ? draft.currentAspect
-      : null) ??
-    firstIncompleteAspect(draft.aspects) ??
-    ASPECT_IDS[0];
-
-  return aspectId ? { screen: 'aspect', aspectId } : { screen: 'quick' };
+/** The flow state a draft is in — exposed so the store never guesses. */
+export const flowStateOf = (draft: RatingDraft | null): RatingFlowState => {
+  if (!draft) return 'preparing';
+  if (!draft.mode) return 'chooseMode';
+  if (draft.mode === 'quick') return draft.quickRating === null ? 'quick' : 'result';
+  return isComplete(draft.aspects) ? 'result' : 'deepStep';
 };

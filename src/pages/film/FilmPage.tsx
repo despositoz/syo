@@ -26,7 +26,7 @@ import { FilmActionRow } from './components/FilmActionRow';
 import { FilmDetails } from './components/FilmDetails';
 import { FilmCast } from './components/FilmCast';
 import { useRatingStore, draftMatchesFilm } from '@features/rating/model/rating.store';
-import { useJournalStore } from '@features/journal/model/journal.store';
+import { useDiaryStore } from '@features/diary/model/diary.store';
 import { prepareFilmPresentationCached, type FilmPresentation } from './film.presentation';
 import { takeFilmOpening } from './filmOpening';
 import styles from './FilmPage.module.css';
@@ -197,7 +197,7 @@ export const FilmPage = ({ filmId, initialTitle }: FilmPageProps) => {
    * rating, or start a new one.
    */
   const draft = useRatingStore((state) => state.draft);
-  const savedEntry = useJournalStore((state) =>
+  const savedEntry = useDiaryStore((state) =>
     state.entries.find((entry) => entry.filmId === filmId),
   );
   const hasOwnDraft = draftMatchesFilm(draft, filmId);

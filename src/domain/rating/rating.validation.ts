@@ -1,122 +1,96 @@
-import { ASPECT_IDS, isRatingAspectId } from './rating.constants';
+import { ASPECT_IDS, DEEP_STEP_COUNT } from './rating.constants';
 import {
   emptyAspects,
   type AspectScores,
-  type FilmSnapshot,
   type RatingDraft,
+  type RatingDraftStatus,
   type RatingMode,
-  type RatingScreen,
   type RatingValue,
 } from './rating.types';
 
 /**
  * Validation for anything crossing a trust boundary: IndexedDB rows, the
- * localStorage mirror, and URL parameters. Storage written by an older build
- * (or corrupted) must never crash the flow — it is rejected and rebuilt.
+ * localStorage mirror, URL parameters. Storage written by an older build (or
+ * corrupted) must never crash the flow.
+ *
+ * Recovery, not rejection (spec §41): a draft with one bad field keeps the
+ * fields that are still valid and drops only the broken ones. Only a draft
+ * without an identifiable film is unusable.
  */
 
 export const isRatingValue = (value: unknown): value is RatingValue =>
-  typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 5;
+  typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 5;
 
-/** Note the explicit null check: `0` is valid and must survive. */
 export const isRatingValueOrNull = (value: unknown): value is RatingValue | null =>
   value === null || isRatingValue(value);
 
 export const isRatingMode = (value: unknown): value is RatingMode =>
-  value === 'quick' || value === 'detailed';
+  value === 'quick' || value === 'deep';
 
-const isRatingScreen = (value: unknown): value is RatingScreen =>
-  value === 'quick' || value === 'aspect' || value === 'result';
+const isStatus = (value: unknown): value is RatingDraftStatus =>
+  value === 'active' || value === 'completed' || value === 'abandoned';
 
-const parseAspects = (value: unknown): AspectScores | null => {
-  if (typeof value !== 'object' || value === null) return null;
-  const source = value as Record<string, unknown>;
+const asStringOrNull = (value: unknown): string | null =>
+  typeof value === 'string' && value ? value : null;
+
+/** Unknown or out-of-range scores are dropped, not treated as zero. */
+const recoverAspects = (value: unknown): AspectScores => {
   const result = emptyAspects();
+  if (typeof value !== 'object' || value === null) return result;
+  const source = value as Record<string, unknown>;
   for (const id of ASPECT_IDS) {
-    const score = source[id];
-    if (!isRatingValueOrNull(score)) return null;
-    result[id] = score;
+    if (isRatingValue(source[id])) result[id] = source[id] as RatingValue;
   }
   return result;
 };
 
-const parseFilmSnapshot = (value: unknown): FilmSnapshot | null => {
-  if (typeof value !== 'object' || value === null) return null;
-  const source = value as Record<string, unknown>;
-  const filmId = source.filmId;
-  const title = source.title;
-  if (typeof filmId !== 'number' || !Number.isFinite(filmId) || filmId <= 0) return null;
-  if (typeof title !== 'string' || !title) return null;
-
-  const snapshot: FilmSnapshot = {
-    filmId,
-    title,
-    updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : new Date().toISOString(),
-  };
-  if (typeof source.originalTitle === 'string') snapshot.originalTitle = source.originalTitle;
-  if (typeof source.releaseYear === 'number') snapshot.releaseYear = source.releaseYear;
-  if (typeof source.posterPath === 'string') snapshot.posterPath = source.posterPath;
-  if (typeof source.backdropPath === 'string') snapshot.backdropPath = source.backdropPath;
-  if (typeof source.dominantColor === 'string') snapshot.dominantColor = source.dominantColor;
-  if (Array.isArray(source.genreIds)) {
-    snapshot.genreIds = source.genreIds.filter((id): id is number => typeof id === 'number');
-  }
-  return snapshot;
-};
-
 /**
- * Parses a stored draft. Returns null for anything unusable rather than
- * throwing: a broken draft must degrade to "no draft", not to a broken app.
+ * Parses a stored draft, salvaging what it can. Returns null only when there
+ * is no film to rate — then "no draft" is the honest answer.
  */
 export const parseRatingDraft = (value: unknown): RatingDraft | null => {
   if (typeof value !== 'object' || value === null) return null;
   const source = value as Record<string, unknown>;
 
-  if (source.schemaVersion !== 1) return null;
-  if (!isRatingMode(source.mode)) return null;
-  if (!isRatingScreen(source.currentScreen)) return null;
-  if (!isRatingValueOrNull(source.quickScore)) return null;
+  const filmId = source.filmId;
+  if (typeof filmId !== 'number' || !Number.isFinite(filmId) || filmId <= 0) return null;
+  const filmTitle = asStringOrNull(source.filmTitle);
+  if (!filmTitle) return null;
 
-  const film = parseFilmSnapshot(source.film);
-  if (!film) return null;
+  const aspects = recoverAspects(source.aspects);
+  const rawStep = source.currentStep;
+  const currentStep =
+    typeof rawStep === 'number' && Number.isInteger(rawStep) && rawStep >= 0
+      ? Math.min(rawStep, DEEP_STEP_COUNT - 1)
+      : 0;
 
-  const aspects = parseAspects(source.aspects);
-  if (!aspects) return null;
-
-  const currentAspect = source.currentAspect;
-  if (
-    currentAspect !== null &&
-    !(typeof currentAspect === 'string' && isRatingAspectId(currentAspect))
-  ) {
-    return null;
-  }
-
+  const timestamp = new Date().toISOString();
   const draft: RatingDraft = {
-    schemaVersion: 1,
-    id: 'active',
-    draftUuid: typeof source.draftUuid === 'string' ? source.draftUuid : createId(),
-    film,
-    mode: source.mode,
-    quickScore: source.quickScore,
+    id: asStringOrNull(source.id) ?? createId(),
+    filmId,
+    filmTitle,
+    posterPath: asStringOrNull(source.posterPath),
+    backdropPath: asStringOrNull(source.backdropPath),
+    releaseYear: asStringOrNull(source.releaseYear),
+    dominantColor: asStringOrNull(source.dominantColor),
+    mode: isRatingMode(source.mode) ? source.mode : null,
+    quickRating: isRatingValue(source.quickRating) ? source.quickRating : null,
     aspects,
-    currentAspect,
-    currentScreen: source.currentScreen,
-    createdAt: typeof source.createdAt === 'string' ? source.createdAt : new Date().toISOString(),
-    updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : new Date().toISOString(),
+    currentStep,
+    status: isStatus(source.status) ? source.status : 'active',
+    createdAt: asStringOrNull(source.createdAt) ?? timestamp,
+    updatedAt: asStringOrNull(source.updatedAt) ?? timestamp,
     revision: typeof source.revision === 'number' ? source.revision : 0,
   };
-
-  if (isRatingValueOrNull(source.previousQuickScore) && source.previousQuickScore !== null) {
-    draft.previousQuickScore = source.previousQuickScore;
-  }
-  if (typeof source.editingEntryId === 'string') draft.editingEntryId = source.editingEntryId;
+  const editingEntryId = asStringOrNull(source.editingEntryId);
+  if (editingEntryId) draft.editingEntryId = editingEntryId;
 
   return draft;
 };
 
 /**
- * Ids are only ever local, so a UUID is not required to be cryptographically
- * unique across devices — it must merely never collide with itself.
+ * Ids are only ever local, so they need not be cryptographically unique across
+ * devices — they must merely never collide with themselves.
  */
 export const createId = (): string => {
   const cryptoRef = globalThis.crypto;

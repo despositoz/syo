@@ -1,0 +1,62 @@
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.summary[data-size='large'] {
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.label {
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+}
+
+.stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.summary[data-size='large'] .stars {
+  gap: var(--space-2);
+}
+
+.shape {
+  width: 15px;
+  height: 15px;
+  overflow: visible;
+}
+
+.summary[data-size='large'] .shape {
+  width: clamp(34px, 11vw, 46px);
+  height: clamp(34px, 11vw, 46px);
+}
+
+.shape :global(.star-outline) {
+  fill: none;
+  stroke: var(--color-text-tertiary);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.shape :global(.star-fill) {
+  fill: var(--color-text-on-media);
+}
+
+/* The number is secondary: the stars carry the meaning. */
+.number {
+  flex: 0 0 auto;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+}
+
+.summary[data-size='large'] .number {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+}

@@ -49,7 +49,9 @@ export class IndexedDbRatingDraftRepository implements RatingDraftRepository {
   constructor(private readonly storage: Storage | undefined = globalThis.localStorage) {}
 
   async getActive(): Promise<RatingDraft | null> {
-    const stored = await safeRead(() => db.ratingDrafts.get('active'), undefined);
+    // The draft keeps its own id, so "the active one" is simply the only row.
+    const rows = await safeRead(() => db.ratingDrafts.toArray(), []);
+    const stored = rows.find((row) => row.status === 'active') ?? rows[0];
     const primary = stored ? parseRatingDraft(stored) : null;
     const mirror = readMirror(this.storage);
 
@@ -61,7 +63,12 @@ export class IndexedDbRatingDraftRepository implements RatingDraftRepository {
     }
     if (!mirror) return primary;
 
-    const newest = mirror.revision > primary.revision ? mirror : primary;
+    // Equal revisions are broken by updatedAt: two writes can share a revision
+    // after a recovery, and the later text is the one the user actually typed.
+    const mirrorWins =
+      mirror.revision > primary.revision ||
+      (mirror.revision === primary.revision && mirror.updatedAt > primary.updatedAt);
+    const newest = mirrorWins ? mirror : primary;
     if (newest === mirror) await this.saveActive(mirror);
     return newest;
   }
@@ -70,7 +77,13 @@ export class IndexedDbRatingDraftRepository implements RatingDraftRepository {
     this.pending = draft;
     // Synchronous first: this is the copy that survives a force close.
     writeMirror(this.storage, draft);
-    this.inFlight = strictWrite(() => db.ratingDrafts.put(draft)).then(() => {
+    // Exactly one row ever lives here, so writing replaces whatever was there.
+    this.inFlight = strictWrite(() =>
+      db.transaction('rw', db.ratingDrafts, async () => {
+        await db.ratingDrafts.clear();
+        await db.ratingDrafts.put(draft);
+      }),
+    ).then(() => {
       if (this.pending === draft) this.pending = null;
     });
     await this.inFlight;
@@ -79,7 +92,7 @@ export class IndexedDbRatingDraftRepository implements RatingDraftRepository {
   async deleteActive(): Promise<void> {
     this.pending = null;
     writeMirror(this.storage, null);
-    await strictWrite(() => db.ratingDrafts.delete('active'));
+    await strictWrite(() => db.ratingDrafts.clear());
   }
 
   async flush(): Promise<void> {

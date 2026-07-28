@@ -1,20 +1,21 @@
 import { create } from 'zustand';
 import {
   createDraft,
-  goToAspect,
-  nextStep,
-  setAspectScore,
-  setQuickScore,
-  upgradeToDetailed,
+  goToStep,
+  setAspectRating,
+  setMode,
+  setQuickRating,
   type CreateDraftOptions,
+  type RatingFilmSummary,
 } from '@domain/rating/rating.machine';
 import type {
-  FilmSnapshot,
   RatingAspectId,
   RatingDraft,
+  RatingFlowState,
   RatingMode,
   RatingValue,
 } from '@domain/rating/rating.types';
+import { flowStateOf } from '@domain/rating/rating.machine';
 import { StorageError } from '@shared/storage/db';
 import {
   ratingDraftRepository,
@@ -22,11 +23,11 @@ import {
 } from '@features/rating/repositories/ratingDraft.repository';
 
 /**
- * The single active rating draft (spec §12.1).
+ * The single active rating draft (spec §7).
  *
- * The store owns the in-memory copy; every domain commit is mirrored to the
- * repository immediately, so a force close loses at most nothing. The store
- * never touches Telegram, navigation or React — screens read it.
+ * The store owns the in-memory copy; every domain commit is persisted at once,
+ * so a force close loses nothing. It never touches Telegram, navigation or
+ * React — screens read it.
  */
 
 export interface RatingState {
@@ -37,18 +38,15 @@ export interface RatingState {
 
   hydrate: () => Promise<void>;
   start: (options: CreateDraftOptions) => Promise<RatingDraft>;
+  chooseMode: (mode: RatingMode) => Promise<void>;
   setQuick: (value: RatingValue) => Promise<void>;
   setAspect: (aspectId: RatingAspectId, value: RatingValue) => Promise<void>;
-  goToAspect: (aspectId: RatingAspectId) => Promise<void>;
-  advance: () => Promise<RatingDraft | null>;
-  switchToDetailed: () => Promise<void>;
+  goToStep: (step: number) => Promise<void>;
   discard: () => Promise<void>;
   /** Best-effort write for pagehide / visibilitychange. */
   flush: () => Promise<void>;
   /** Writes the current draft again after a storage failure. */
   retrySave: () => Promise<void>;
-  /** Puts a just-discarded draft back — the Undo of `discard`. */
-  restoreDiscarded: (draft: RatingDraft) => Promise<void>;
   clearStorageError: () => void;
 }
 
@@ -61,13 +59,12 @@ export const setRatingDraftRepository = (next: RatingDraftRepository): void => {
 
 export const useRatingStore = create<RatingState>((set, get) => {
   /**
-   * Applies a pure transition and persists it. The in-memory draft is updated
-   * first so the UI never waits for IndexedDB.
+   * Applies a pure transition and persists it.
    *
    * A failed write is recorded in `storageError` *and* rethrown. Swallowing it
-   * told the caller everything was fine while the answer existed only in
-   * memory — the flow would happily carry on and a force-close would lose an
-   * answer the user had already seen confirmed.
+   * would tell the caller everything was fine while the answer existed only in
+   * memory — the flow would carry on and a force-close would lose an answer the
+   * user had already seen confirmed.
    */
   const commit = async (next: RatingDraft): Promise<void> => {
     set({ draft: next });
@@ -97,45 +94,36 @@ export const useRatingStore = create<RatingState>((set, get) => {
       return draft;
     },
 
+    chooseMode: async (mode) => {
+      const draft = get().draft;
+      if (!draft) return;
+      await commit(setMode(draft, mode));
+    },
+
     setQuick: async (value) => {
       const draft = get().draft;
       if (!draft) return;
-      await commit(setQuickScore(draft, value));
+      await commit(setQuickRating(draft, value));
     },
 
     setAspect: async (aspectId, value) => {
       const draft = get().draft;
       if (!draft) return;
-      await commit(setAspectScore(draft, aspectId, value));
+      await commit(setAspectRating(draft, aspectId, value));
     },
 
-    goToAspect: async (aspectId) => {
+    goToStep: async (step) => {
       const draft = get().draft;
       if (!draft) return;
-      const next = goToAspect(draft, aspectId);
-      if (next === draft) return; // locked aspect — nothing changed
+      const next = goToStep(draft, step);
+      if (next === draft) return; // locked step — nothing changed
       await commit(next);
-    },
-
-    advance: async () => {
-      const draft = get().draft;
-      if (!draft) return null;
-      const next = nextStep(draft);
-      if (next === draft) return draft;
-      await commit(next);
-      return next;
-    },
-
-    switchToDetailed: async () => {
-      const draft = get().draft;
-      if (!draft) return;
-      await commit(upgradeToDetailed(draft));
     },
 
     /**
-     * Clears the draft from storage *first*. Wiping it from memory and then
-     * ignoring a failed delete would resurrect it on the next launch — the user
-     * would find a rating they had explicitly thrown away.
+     * Clears storage *first*. Wiping memory and then ignoring a failed delete
+     * would resurrect the draft on the next launch — the user would find a
+     * rating they had explicitly thrown away.
      */
     discard: async () => {
       try {
@@ -158,43 +146,30 @@ export const useRatingStore = create<RatingState>((set, get) => {
       await commit(draft);
     },
 
-    restoreDiscarded: async (draft) => {
-      // Refuses if something new was started meanwhile: two active drafts must
-      // never exist, and the newer one wins.
-      if (get().draft) return;
-      await commit(draft);
-    },
-
     clearStorageError: () => set({ storageError: null }),
   };
 });
 
 /** The draft belongs to this film — used to decide resume vs conflict. */
 export const draftMatchesFilm = (draft: RatingDraft | null, filmId: number): boolean =>
-  draft !== null && draft.film.filmId === filmId;
+  draft !== null && draft.filmId === filmId;
 
-/** Snapshot of everything the flow needs about a film, taken once at start. */
-export const snapshotFromFilm = (film: {
+export const useRatingFlowState = (): RatingFlowState =>
+  useRatingStore((state) => flowStateOf(state.draft));
+
+/** Everything the flow needs about a film, taken once from local data. */
+export const filmSummaryFrom = (film: {
   id: number;
   title: string;
-  originalTitle?: string;
   year?: string;
   posterPath?: string;
   backdropPath?: string;
   accent?: { rgb: string };
-}): FilmSnapshot => {
-  const snapshot: FilmSnapshot = {
-    filmId: film.id,
-    title: film.title,
-    updatedAt: new Date().toISOString(),
-  };
-  if (film.originalTitle) snapshot.originalTitle = film.originalTitle;
-  const year = Number(film.year);
-  if (Number.isFinite(year) && year > 0) snapshot.releaseYear = year;
-  if (film.posterPath) snapshot.posterPath = film.posterPath;
-  if (film.backdropPath) snapshot.backdropPath = film.backdropPath;
-  if (film.accent?.rgb) snapshot.dominantColor = film.accent.rgb;
-  return snapshot;
-};
-
-export type { RatingMode };
+}): RatingFilmSummary => ({
+  filmId: film.id,
+  filmTitle: film.title,
+  posterPath: film.posterPath || null,
+  backdropPath: film.backdropPath || null,
+  releaseYear: film.year || null,
+  dominantColor: film.accent?.rgb ?? null,
+});

@@ -1,77 +1,60 @@
 /**
- * Rating domain types (spec §13).
+ * Rating domain types (spec §5).
  *
- * `null` means "not rated yet"; `0` means "deliberately rated zero".
- * These two are never conflated — no falsy checks anywhere in this codebase.
+ * The scale is 1-5 with no halves. Zero is not a rating: "nothing chosen yet"
+ * is `null` everywhere outside the star control's own internal state.
  */
 
-export type RatingMode = 'quick' | 'detailed';
+export type RatingMode = 'quick' | 'deep';
 
-export type RatingAspectId =
-  'story' | 'performance' | 'directionVisual' | 'soundMusic' | 'aftertaste';
+export type RatingAspectId = 'story' | 'characters' | 'direction' | 'sound' | 'aftertaste';
 
-export type RatingValue = 0 | 1 | 2 | 3 | 4 | 5;
+export type RatingValue = 1 | 2 | 3 | 4 | 5;
+
+export type RatingDraftStatus = 'active' | 'completed' | 'abandoned';
 
 export type SyncStatus = 'local' | 'pending' | 'synced' | 'error' | 'deleted';
 
-/** The screen a draft is parked on, so a reload resumes exactly there. */
-export type RatingScreen = 'quick' | 'aspect' | 'result';
-
-/**
- * Everything the rating flow needs about a film, copied at start time.
- * The flow must work offline, so it never re-reads TMDB.
- */
-export interface FilmSnapshot {
-  filmId: number;
-  title: string;
-  originalTitle?: string;
-  releaseYear?: number;
-  posterPath?: string;
-  backdropPath?: string;
-  /** Dominant colour as "r, g, b" so it drops straight into rgba(). */
-  dominantColor?: string;
-  genreIds?: number[];
-  updatedAt: string;
-}
+/** Flow state machine (spec §3) — lives in the store, never only in a component. */
+export type RatingFlowState =
+  'preparing' | 'chooseMode' | 'quick' | 'deepStep' | 'result' | 'saving' | 'saved' | 'error';
 
 export interface AspectScores {
   story: RatingValue | null;
-  performance: RatingValue | null;
-  directionVisual: RatingValue | null;
-  soundMusic: RatingValue | null;
+  characters: RatingValue | null;
+  direction: RatingValue | null;
+  sound: RatingValue | null;
   aftertaste: RatingValue | null;
 }
 
 export interface RatingDraft {
-  schemaVersion: 1;
-  /** Only one active draft exists in the whole app. */
-  id: 'active';
-  draftUuid: string;
-  film: FilmSnapshot;
-  mode: RatingMode;
-  quickScore: RatingValue | null;
-  /** Kept when quick is upgraded to detailed — never used in the formula. */
-  previousQuickScore?: RatingValue | null;
+  id: string;
+  filmId: number;
+  filmTitle: string;
+  posterPath: string | null;
+  backdropPath: string | null;
+  releaseYear: string | null;
+  /** Null until a mode is chosen — the selector alone creates nothing. */
+  mode: RatingMode | null;
+  quickRating: RatingValue | null;
   aspects: AspectScores;
-  currentAspect: RatingAspectId | null;
-  currentScreen: RatingScreen;
-  /** Set when the draft edits an existing journal entry. */
-  editingEntryId?: string;
+  /** 0-based index into the five deep steps. */
+  currentStep: number;
+  status: RatingDraftStatus;
   createdAt: string;
   updatedAt: string;
+  /** Set when the draft edits an existing entry — never creates a second one. */
+  editingEntryId?: string;
+  /** "r, g, b" of the film, for the ambient. */
+  dominantColor?: string | null;
+  /** Bumped on every commit so the emergency mirror can win a race. */
   revision: number;
-}
-
-export interface RatingResult {
-  rawAverage: number;
-  displayScore: number;
-  formulaVersion: 1;
 }
 
 export const emptyAspects = (): AspectScores => ({
   story: null,
-  performance: null,
-  directionVisual: null,
-  soundMusic: null,
+  characters: null,
+  direction: null,
+  sound: null,
   aftertaste: null,
 });

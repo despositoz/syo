@@ -1,0 +1,74 @@
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.markers {
+  display: flex;
+  align-items: center;
+}
+
+/* The button is an invisible 44px hit zone around a small marker. */
+.marker {
+  display: grid;
+  place-items: center;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+.marker:disabled {
+  cursor: default;
+}
+
+.dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-text-tertiary);
+  opacity: 0.42;
+  transition:
+    width var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.marker[data-state='done'] .dot {
+  background: var(--color-text);
+  opacity: 0.9;
+}
+
+/* The current marker is wider as well as brighter — shape, not colour alone. */
+.marker[data-state='current'] .dot {
+  width: 20px;
+  background: var(--color-text);
+  opacity: 1;
+}
+
+.marker[data-state='future'] .dot {
+  opacity: 0.28;
+}
+
+.marker:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -6px;
+  border-radius: var(--radius-sm);
+}
+
+.counter {
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    transition: none;
+  }
+}

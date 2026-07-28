@@ -1,9 +1,9 @@
-import type { FilmSnapshot } from '@domain/rating/rating.types';
+import type { RatingFilmSummary } from '@domain/rating/rating.machine';
 import { Poster } from '@shared/ui/Poster/Poster';
 import styles from './FilmIdentity.module.css';
 
 export interface FilmIdentityProps {
-  film: FilmSnapshot;
+  film: RatingFilmSummary;
   size?: 'hero' | 'compact';
 }
 
@@ -17,8 +17,8 @@ export const FilmIdentity = ({ film, size = 'compact' }: FilmIdentityProps) => (
   <div className={styles.identity} data-size={size}>
     <div className={styles.poster}>
       <Poster
-        title={film.title}
-        year={film.releaseYear ? String(film.releaseYear) : ''}
+        title={film.filmTitle}
+        year={film.releaseYear ?? ''}
         posterPath={film.posterPath ?? ''}
         accent={{ hex: '#6f2a35', rgb: film.dominantColor ?? '111, 42, 53' }}
         width={size === 'hero' ? 168 : 56}
@@ -26,6 +26,6 @@ export const FilmIdentity = ({ film, size = 'compact' }: FilmIdentityProps) => (
       />
     </div>
     {/* Full title, wrapped rather than truncated on the key screens. */}
-    <p className={styles.title}>{film.title}</p>
+    <p className={styles.title}>{film.filmTitle}</p>
   </div>
 );

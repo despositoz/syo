@@ -1,0 +1,109 @@
+.group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  /* Vertical scrolling stays available until a horizontal drag is claimed. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.group[data-size='compact'] {
+  justify-content: flex-start;
+  gap: 3px;
+  cursor: default;
+}
+
+.group:focus-visible,
+.star:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+/* Each star is its own 44px touch target. */
+.star {
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  aspect-ratio: 1;
+  max-width: 60px;
+  transition: transform 140ms var(--ease-standard);
+}
+
+.group[data-size='compact'] .star {
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 15px;
+  height: 15px;
+  max-width: none;
+}
+
+.shape {
+  width: 78%;
+  height: 78%;
+  overflow: visible;
+}
+
+.group[data-size='compact'] .shape {
+  width: 100%;
+  height: 100%;
+}
+
+/* Unrated: dark glass outline, still clearly visible on the background. */
+.shape :global(.star-outline) {
+  fill: rgba(255, 255, 255, 0.04);
+  stroke: var(--color-text-tertiary);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+/*
+ * Rated: warm ivory, drifting a touch toward the film accent at the top of the
+ * scale. Never orange, never neon yellow, no glow.
+ */
+.shape :global(.star-fill) {
+  fill: var(--color-text-on-media);
+  stroke: none;
+}
+
+.star[data-filled] .shape :global(.star-outline) {
+  stroke: transparent;
+}
+
+.star[data-filled]:nth-child(n + 4) .shape :global(.star-fill) {
+  fill: color-mix(
+    in srgb,
+    var(--color-text-on-media) 80%,
+    rgb(var(--film-accent-rgb, 111, 42, 53))
+  );
+}
+
+/* The star under the finger lifts slightly — no bounce, no pulse. */
+.star[data-current] {
+  transform: scale(1.06);
+}
+
+.group[data-dragging] .star {
+  transition: none;
+}
+
+/* Reduce Motion keeps the control fully functional, just still. */
+.group[data-reduced] .star,
+:global(:root[data-motion='reduced']) .star {
+  transform: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star {
+    transform: none;
+    transition: none;
+  }
+}

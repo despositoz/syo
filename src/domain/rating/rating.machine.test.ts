@@ -1,173 +1,171 @@
 import { describe, expect, it } from 'vitest';
 import {
-  backTarget,
-  canOpenAspect,
+  backTargetFrom,
   canOpenResult,
+  canOpenStep,
   createDraft,
-  firstIncompleteAspect,
-  goToAspect,
-  goToResult,
+  draftProgressLabel,
+  firstIncompleteStep,
+  flowStateOf,
+  goToStep,
   hasProgress,
   nextStep,
   resumeTarget,
-  setAspectScore,
-  setQuickScore,
-  upgradeToDetailed,
+  setAspectRating,
+  setMode,
+  setQuickRating,
+  type RatingFilmSummary,
 } from './rating.machine';
-import type { FilmSnapshot, RatingDraft } from './rating.types';
+import type { RatingDraft } from './rating.types';
 
-const film: FilmSnapshot = {
+const film: RatingFilmSummary = {
   filmId: 42,
-  title: 'Тестовый фильм',
-  updatedAt: '2026-07-26T10:00:00.000Z',
+  filmTitle: 'Тестовый фильм',
+  posterPath: '/poster.jpg',
+  backdropPath: null,
+  releaseYear: '2026',
 };
 
-const detailedDraft = (): RatingDraft => createDraft({ film, mode: 'detailed' });
-const quickDraft = (): RatingDraft => createDraft({ film, mode: 'quick' });
+const deepDraft = (): RatingDraft => setMode(createDraft({ film }), 'deep');
+const quickDraft = (): RatingDraft => setMode(createDraft({ film }), 'quick');
 
 describe('draft creation', () => {
-  it('starts a quick draft on the quick screen with no score', () => {
-    const draft = quickDraft();
-    expect(draft.mode).toBe('quick');
-    expect(draft.currentScreen).toBe('quick');
-    expect(draft.quickScore).toBeNull();
+  it('starts with no mode and nothing rated', () => {
+    const draft = createDraft({ film });
+    expect(draft.mode).toBeNull();
+    expect(draft.quickRating).toBeNull();
+    expect(draft.status).toBe('active');
     expect(hasProgress(draft)).toBe(false);
+    expect(flowStateOf(draft)).toBe('chooseMode');
   });
 
-  it('starts a detailed draft on the first aspect with nothing rated', () => {
-    const draft = detailedDraft();
-    expect(draft.currentAspect).toBe('story');
-    expect(draft.currentScreen).toBe('aspect');
-    expect(Object.values(draft.aspects).every((value) => value === null)).toBe(true);
+  it('carries the film through, so the flow works offline', () => {
+    const draft = createDraft({ film });
+    expect(draft.filmId).toBe(42);
+    expect(draft.filmTitle).toBe('Тестовый фильм');
+    expect(draft.posterPath).toBe('/poster.jpg');
+    expect(draft.releaseYear).toBe('2026');
   });
 
   it('carries existing values when editing an entry', () => {
-    const draft = createDraft({
-      film,
-      mode: 'quick',
-      editingEntryId: 'entry-1',
-      quickScore: 4,
-    });
+    const draft = createDraft({ film, mode: 'quick', editingEntryId: 'entry-1', quickRating: 4 });
     expect(draft.editingEntryId).toBe('entry-1');
-    expect(draft.quickScore).toBe(4);
+    expect(draft.quickRating).toBe(4);
   });
 
   it('bumps the revision on every commit so the mirror can win', () => {
     const draft = quickDraft();
-    const next = setQuickScore(draft, 3);
+    const next = setQuickRating(draft, 3);
     expect(next.revision).toBe(draft.revision + 1);
-    expect(next.updatedAt >= draft.updatedAt).toBe(true);
   });
 });
 
-describe('aspect progression', () => {
-  it('cannot skip an unrated aspect', () => {
-    const draft = detailedDraft();
-    expect(canOpenAspect(draft, 'directionVisual')).toBe(false);
-    expect(goToAspect(draft, 'directionVisual')).toBe(draft);
-    // nextStep also refuses while the current aspect has no value.
-    expect(nextStep(draft).currentAspect).toBe('story');
+describe('deep steps', () => {
+  it('cannot skip an unanswered step', () => {
+    const draft = deepDraft();
+    expect(canOpenStep(draft, 2)).toBe(false);
+    expect(goToStep(draft, 2)).toBe(draft);
+    // nextStep also refuses while the current step has no value.
+    expect(nextStep(draft)).toBe(0);
   });
 
-  it('advances to the next aspect once the current one is rated', () => {
-    const draft = nextStep(setAspectScore(detailedDraft(), 'story', 4));
-    expect(draft.currentAspect).toBe('performance');
+  it('advances once the current step is answered', () => {
+    const draft = setAspectRating(deepDraft(), 'story', 4);
+    expect(nextStep(draft)).toBe(1);
   });
 
-  it('treats a deliberate zero as a rated aspect', () => {
-    const draft = nextStep(setAspectScore(detailedDraft(), 'story', 0));
-    expect(draft.currentAspect).toBe('performance');
-    expect(firstIncompleteAspect(draft.aspects)).toBe('performance');
-  });
-
-  it('can return to a completed aspect', () => {
-    let draft = nextStep(setAspectScore(detailedDraft(), 'story', 4));
-    draft = goToAspect(draft, 'story');
-    expect(draft.currentAspect).toBe('story');
-    expect(draft.aspects.story).toBe(4);
+  it('can return to an answered step', () => {
+    let draft = setAspectRating(deepDraft(), 'story', 4);
+    draft = goToStep(draft, 1);
+    draft = setAspectRating(draft, 'characters', 3);
+    expect(canOpenStep(draft, 0)).toBe(true);
+    expect(goToStep(draft, 0).currentStep).toBe(0);
   });
 
   it('reaches the result only after all five', () => {
-    let draft = detailedDraft();
-    expect(canOpenResult(draft)).toBe(false);
-    expect(goToResult(draft)).toBe(draft);
-
-    for (const id of ['story', 'performance', 'directionVisual', 'soundMusic'] as const) {
-      draft = nextStep(setAspectScore(draft, id, 4));
+    let draft = deepDraft();
+    for (const [step, id] of (['story', 'characters', 'direction', 'sound'] as const).entries()) {
+      draft = setAspectRating(goToStep(draft, step), id, 4);
       expect(canOpenResult(draft)).toBe(false);
     }
-    draft = nextStep(setAspectScore(draft, 'aftertaste', 5));
+    draft = setAspectRating(goToStep(draft, 4), 'aftertaste', 5);
     expect(canOpenResult(draft)).toBe(true);
-    expect(draft.currentScreen).toBe('result');
+    expect(nextStep(draft)).toBe('result');
   });
 
-  it('reaches the quick result once a score is chosen', () => {
+  it('points at the first gap', () => {
+    let draft = setAspectRating(deepDraft(), 'story', 4);
+    draft = setAspectRating(goToStep(draft, 1), 'characters', 4);
+    expect(firstIncompleteStep(draft.aspects)).toBe(2);
+  });
+});
+
+describe('quick', () => {
+  it('reaches the result as soon as a star is chosen', () => {
     expect(canOpenResult(quickDraft())).toBe(false);
-    const draft = nextStep(setQuickScore(quickDraft(), 0));
-    expect(draft.currentScreen).toBe('result');
+    const draft = setQuickRating(quickDraft(), 4);
+    expect(canOpenResult(draft)).toBe(true);
+    expect(nextStep(draft)).toBe('result');
   });
 });
 
 describe('back semantics', () => {
-  it('goes to the previous aspect, then to the mode selector', () => {
-    const draft = nextStep(setAspectScore(detailedDraft(), 'story', 3));
-    expect(backTarget(draft)).toEqual({ kind: 'aspect', aspectId: 'story' });
-    expect(backTarget(goToAspect(draft, 'story'))).toEqual({ kind: 'mode' });
+  it('mode goes back to the film page', () => {
+    expect(backTargetFrom(createDraft({ film }), 'mode')).toEqual({ kind: 'film' });
   });
 
-  it('returns from the quick result to the quick screen', () => {
-    const draft = nextStep(setQuickScore(quickDraft(), 4));
-    expect(backTarget(draft)).toEqual({ kind: 'quick' });
+  it('quick goes back to the mode screen', () => {
+    expect(backTargetFrom(quickDraft(), 'quick')).toEqual({ kind: 'mode' });
   });
 
-  it('returns from the detailed result to the last aspect', () => {
-    let draft = detailedDraft();
-    for (const id of [
-      'story',
-      'performance',
-      'directionVisual',
-      'soundMusic',
-      'aftertaste',
-    ] as const) {
-      draft = nextStep(setAspectScore(draft, id, 4));
-    }
-    expect(backTarget(draft)).toEqual({ kind: 'aspect', aspectId: 'aftertaste' });
-  });
-});
+  it('deep step 1 goes to mode, step N to the previous step', () => {
+    const first = deepDraft();
+    expect(backTargetFrom(first, 'deep')).toEqual({ kind: 'mode' });
 
-describe('quick → detailed', () => {
-  it('keeps the quick score as history and out of the formula', () => {
-    const draft = upgradeToDetailed(setQuickScore(quickDraft(), 5));
-    expect(draft.mode).toBe('detailed');
-    expect(draft.previousQuickScore).toBe(5);
-    expect(draft.quickScore).toBeNull();
-    expect(Object.values(draft.aspects).every((value) => value === null)).toBe(true);
+    const third = { ...first, currentStep: 2 };
+    expect(backTargetFrom(third, 'deep')).toEqual({ kind: 'step', step: 1 });
+  });
+
+  it('result goes back to the last rating screen', () => {
+    expect(backTargetFrom(quickDraft(), 'result')).toEqual({ kind: 'quick' });
+    expect(backTargetFrom(deepDraft(), 'result')).toEqual({ kind: 'step', step: 4 });
   });
 });
 
 describe('resuming', () => {
-  it('returns to the aspect the draft was parked on', () => {
-    let draft = nextStep(setAspectScore(detailedDraft(), 'story', 4));
-    draft = nextStep(setAspectScore(draft, 'performance', 3));
-    expect(resumeTarget(draft)).toEqual({ screen: 'aspect', aspectId: 'directionVisual' });
+  it('returns to the step the draft was left on', () => {
+    let draft = setAspectRating(deepDraft(), 'story', 4);
+    draft = setAspectRating(goToStep(draft, 1), 'characters', 3);
+    draft = goToStep(draft, 2);
+    expect(resumeTarget(draft)).toEqual({ screen: 'deep', step: 2 });
   });
 
-  it('never opens a result that the data cannot support', () => {
-    const broken: RatingDraft = { ...detailedDraft(), currentScreen: 'result' };
-    expect(resumeTarget(broken)).toEqual({ screen: 'aspect', aspectId: 'story' });
+  it('opens the mode screen when no mode was chosen', () => {
+    expect(resumeTarget(createDraft({ film }))).toEqual({ screen: 'mode' });
   });
 
-  it('opens the result when it is genuinely complete', () => {
-    let draft = detailedDraft();
-    for (const id of [
-      'story',
-      'performance',
-      'directionVisual',
-      'soundMusic',
-      'aftertaste',
-    ] as const) {
-      draft = nextStep(setAspectScore(draft, id, 4));
+  it('never opens a step the data cannot support', () => {
+    // A stored step past the answers falls back to the first real gap.
+    const broken: RatingDraft = { ...deepDraft(), currentStep: 4 };
+    expect(resumeTarget(broken)).toEqual({ screen: 'deep', step: 0 });
+  });
+
+  it('opens the result when all five are in', () => {
+    let draft = deepDraft();
+    for (const [step, id] of (
+      ['story', 'characters', 'direction', 'sound', 'aftertaste'] as const
+    ).entries()) {
+      draft = setAspectRating(goToStep(draft, step), id, 4);
     }
     expect(resumeTarget(draft)).toEqual({ screen: 'result' });
+  });
+});
+
+describe('progress label', () => {
+  it('describes how far a draft got', () => {
+    expect(draftProgressLabel(createDraft({ film }))).toBe('Режим не выбран');
+    expect(draftProgressLabel(quickDraft())).toBe('Оценка не выбрана');
+    expect(draftProgressLabel(setQuickRating(quickDraft(), 4))).toBe('Осталось сохранить');
+    expect(draftProgressLabel(setAspectRating(deepDraft(), 'story', 4))).toBe('1 из 5');
   });
 });

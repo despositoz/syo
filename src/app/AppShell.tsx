@@ -8,15 +8,15 @@ import { SyncIndicator } from '@shared/ui/SyncIndicator/SyncIndicator';
 import { runPageTransition } from '@shared/motion/transitions';
 import { usePerformanceStore } from './performance/PerformanceController';
 import { FeedPage } from '@pages/feed/FeedPage';
-import { JournalScreen } from '@features/journal/screens/JournalScreen';
-import { JournalEntryScreen } from '@features/journal/screens/JournalEntryScreen';
+import { DiaryPage } from '@features/diary/screens/DiaryPage';
+import { DiaryEntryPage } from '@features/diary/screens/DiaryEntryPage';
 import { ProfilePlaceholderPage } from '@pages/profile/ProfilePlaceholderPage';
 import { MoviePickerPage } from '@pages/movie-picker/MoviePickerPage';
 import { FilmPage } from '@pages/film/FilmPage';
-import { RatingModeScreen } from '@features/rating/screens/RatingModeScreen';
-import { QuickRatingScreen } from '@features/rating/screens/QuickRatingScreen';
-import { DetailedRatingScreen } from '@features/rating/screens/DetailedRatingScreen';
-import { RatingResultScreen } from '@features/rating/screens/RatingResultScreen';
+import { RatingModePage } from '@features/rating/screens/RatingModePage';
+import { QuickRatingPage } from '@features/rating/screens/QuickRatingPage';
+import { DeepRatingPage } from '@features/rating/screens/DeepRatingPage';
+import { RatingResultPage } from '@features/rating/screens/RatingResultPage';
 import styles from './AppShell.module.css';
 
 const RootScreen = ({ tab }: { tab: RootTab }) => {
@@ -24,7 +24,7 @@ const RootScreen = ({ tab }: { tab: RootTab }) => {
     case 'feed':
       return <FeedPage />;
     case 'diary':
-      return <JournalScreen />;
+      return <DiaryPage />;
     case 'profile':
       return <ProfilePlaceholderPage />;
   }
@@ -37,15 +37,15 @@ const OverlayScreen = ({ route }: { route: Route }) => {
     case 'film':
       return <FilmPage filmId={route.filmId} initialTitle={route.title} />;
     case 'rateMode':
-      return <RatingModeScreen filmId={route.filmId} />;
+      return <RatingModePage filmId={route.filmId} />;
     case 'rateQuick':
-      return <QuickRatingScreen filmId={route.filmId} />;
-    case 'rateAspect':
-      return <DetailedRatingScreen filmId={route.filmId} aspectId={route.aspectId} />;
+      return <QuickRatingPage filmId={route.filmId} />;
+    case 'rateDeep':
+      return <DeepRatingPage filmId={route.filmId} step={route.step} />;
     case 'rateResult':
-      return <RatingResultScreen filmId={route.filmId} />;
-    case 'journalEntry':
-      return <JournalEntryScreen entryId={route.entryId} />;
+      return <RatingResultPage filmId={route.filmId} />;
+    case 'diaryEntry':
+      return <DiaryEntryPage entryId={route.entryId} />;
     case 'root':
       return null;
   }

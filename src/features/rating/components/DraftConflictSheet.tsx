@@ -41,7 +41,7 @@ export const DraftConflictSheet = ({
   return (
     <Sheet
       open={open}
-      title={byMode ? 'Оценка этого фильма уже начата' : `Ты не закончил «${draft.film.title}»`}
+      title={byMode ? 'Оценка этого фильма уже начата' : `Ты не закончил «${draft.filmTitle}»`}
       onClose={onClose}
     >
       <p className={styles.text}>
@@ -52,7 +52,7 @@ export const DraftConflictSheet = ({
 
       <div className={styles.actions}>
         <Button variant="primary" block onClick={onContinue} data-testid="conflict-continue">
-          {byMode ? 'Продолжить начатое' : `Продолжить «${shortTitle(draft.film.title)}»`}
+          {byMode ? 'Продолжить начатое' : `Продолжить «${shortTitle(draft.filmTitle)}»`}
         </Button>
         <Button variant="secondary" block onClick={onClose}>
           Остаться

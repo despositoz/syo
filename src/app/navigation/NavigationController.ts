@@ -28,6 +28,8 @@ export class NavigationController {
   /** Stack to install once the pending history unwind reports back. */
   private pendingStack: Route[] | null = null;
   private backInterceptor: (() => boolean) | null = null;
+  /** Route to push once the pending unwind has landed. */
+  private pendingPush: Route | null = null;
 
   constructor(
     private readonly telegram: TelegramController,
@@ -97,16 +99,35 @@ export class NavigationController {
     this.pushRoute(route);
   }
 
-  openJournalEntry(entryId: string): void {
-    this.pushRoute({ kind: 'journalEntry', entryId });
+  openDiaryEntry(entryId: string): void {
+    this.pushRoute({ kind: 'diaryEntry', entryId });
   }
 
-  /** Leaves the flow entirely and lands on the Diary with the new entry. */
-  showJournal(): void {
+  /**
+   * Leaves the rating flow entirely and lands on the freshly saved entry.
+   *
+   * The flow is finished and its draft is gone, so the rating screens must not
+   * stay underneath: back from the entry belongs in the Diary, not in a rating
+   * step the user already completed.
+   */
+  showSavedEntry(entryId: string): void {
     const state = useNavigationStore.getState();
     const toDrop = state.stack.length - 1;
+    const entry: Route = { kind: 'diaryEntry', entryId };
+
     state.selectTab('diary');
+    /*
+     * The unwind is asynchronous, so the entry is pushed only once it lands.
+     * Collapsing and pushing in the same tick would leave the depth counter
+     * claiming a history entry that does not exist, and back would walk out of
+     * the app entirely.
+     */
+    this.pendingPush = entry;
     this.replaceHistory(routeToPath({ kind: 'root', tab: 'diary' }), toDrop);
+    if (!this.pendingStack) {
+      this.pendingPush = null;
+      this.pushRoute(entry);
+    }
   }
 
   /** Deliberate first action that is not a navigation (search field, CTA). */
@@ -193,6 +214,10 @@ export class NavigationController {
       useNavigationStore.getState().replaceStack(pending);
       const top = pending[pending.length - 1];
       if (top) this.win.history.replaceState({ syo: this.historyDepth }, '', routeToPath(top));
+
+      const push = this.pendingPush;
+      this.pendingPush = null;
+      if (push) this.pushRoute(push);
       return;
     }
 
