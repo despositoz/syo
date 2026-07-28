@@ -396,7 +396,9 @@ export class TelegramController {
       ...patch,
       isFullscreen,
       chromeMode: resolveChromeMode({ inTelegram, isFullscreen }),
-      colorScheme: inTelegram ? (app?.colorScheme ?? this.state.colorScheme) : this.state.colorScheme,
+      colorScheme: inTelegram
+        ? (app?.colorScheme ?? this.state.colorScheme)
+        : this.state.colorScheme,
       isExpanded: Boolean(app?.isExpanded ?? !inTelegram),
       viewportHeight,
       viewportStableHeight: Math.round(Number(app?.viewportStableHeight ?? viewportHeight)),

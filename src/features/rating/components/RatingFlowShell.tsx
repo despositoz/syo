@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTelegram } from '@app/telegram/telegramStore';
+import { useRatingStore } from '../model/rating.store';
 import { IconButton } from '@shared/ui/IconButton/IconButton';
 import { BackIcon, CloseIcon } from '@shared/ui/icons';
 import styles from './RatingFlowShell.module.css';
@@ -32,6 +33,8 @@ export const RatingFlowShell = ({
   accentRgb,
 }: RatingFlowShellProps) => {
   const chromeMode = useTelegram().chromeMode;
+  const storageError = useRatingStore((state) => state.storageError);
+  const retrySave = useRatingStore((state) => state.retrySave);
   const ownBackButton = chromeMode === 'custom';
 
   return (
@@ -58,6 +61,20 @@ export const RatingFlowShell = ({
           ) : null}
         </div>
       </header>
+
+      {/*
+        Autosave failing is the one error the user must hear about: everything
+        on screen looks saved, but it exists only in memory. Assertive, because
+        continuing to rate would quietly lose answers.
+      */}
+      {storageError ? (
+        <div className={styles.storageError} role="alert" data-testid="rating-storage-error">
+          <span>Не получилось сохранить оценку на устройстве.</span>
+          <button type="button" onClick={() => void retrySave()} data-testid="rating-storage-retry">
+            Повторить
+          </button>
+        </div>
+      ) : null}
 
       <div className={`${styles.body} scroll-y`}>{children}</div>
 

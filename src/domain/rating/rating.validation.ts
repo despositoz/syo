@@ -84,7 +84,10 @@ export const parseRatingDraft = (value: unknown): RatingDraft | null => {
   if (!aspects) return null;
 
   const currentAspect = source.currentAspect;
-  if (currentAspect !== null && !(typeof currentAspect === 'string' && isRatingAspectId(currentAspect))) {
+  if (
+    currentAspect !== null &&
+    !(typeof currentAspect === 'string' && isRatingAspectId(currentAspect))
+  ) {
     return null;
   }
 

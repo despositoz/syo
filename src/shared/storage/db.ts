@@ -108,11 +108,13 @@ export class StorageError extends Error {
 export const classifyStorageError = (error: unknown): StorageError => {
   if (error instanceof StorageError) return error;
   const name = (error as { name?: string } | null)?.name ?? '';
-  if (name === 'QuotaExceededError' || name === 'QuotaExceeded') return new StorageError('quota', error);
+  if (name === 'QuotaExceededError' || name === 'QuotaExceeded')
+    return new StorageError('quota', error);
   if (name === 'AbortError' || name === 'TransactionInactiveError')
     return new StorageError('aborted', error);
   if (name === 'DataCloneError') return new StorageError('serialization', error);
-  if (name === 'VersionError' || name === 'UpgradeError') return new StorageError('migration', error);
+  if (name === 'VersionError' || name === 'UpgradeError')
+    return new StorageError('migration', error);
   return new StorageError('unknown', error);
 };
 

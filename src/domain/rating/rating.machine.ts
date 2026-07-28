@@ -180,12 +180,16 @@ export const hasProgress = (draft: RatingDraft): boolean =>
  */
 export const resumeTarget = (
   draft: RatingDraft,
-): { screen: 'quick' | 'result'; aspectId?: undefined } | { screen: 'aspect'; aspectId: RatingAspectId } => {
+):
+  | { screen: 'quick' | 'result'; aspectId?: undefined }
+  | { screen: 'aspect'; aspectId: RatingAspectId } => {
   if (draft.currentScreen === 'result' && canOpenResult(draft)) return { screen: 'result' };
   if (draft.mode === 'quick') return { screen: 'quick' };
 
   const aspectId =
-    (draft.currentAspect && canOpenAspect(draft, draft.currentAspect) ? draft.currentAspect : null) ??
+    (draft.currentAspect && canOpenAspect(draft, draft.currentAspect)
+      ? draft.currentAspect
+      : null) ??
     firstIncompleteAspect(draft.aspects) ??
     ASPECT_IDS[0];
 

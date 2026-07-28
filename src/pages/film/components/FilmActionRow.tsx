@@ -20,36 +20,33 @@ export interface FilmActionRowProps {
  * This row is the *hero projection* of the single watchlist function — the
  * toolbar bookmark only appears once this row leaves the viewport (spec §16).
  */
-export const FilmActionRow = forwardRef<HTMLDivElement, FilmActionRowProps>(
-  function FilmActionRow({ accent, inWatchlist, onRate, onToggleWatchlist, ctaLabel = 'Начать оценку' }, ref) {
-    return (
-      <div
-        className={styles.row}
-        ref={ref}
-        style={{ ['--film-accent-rgb' as string]: accent.rgb }}
-      >
-        {/*
+export const FilmActionRow = forwardRef<HTMLDivElement, FilmActionRowProps>(function FilmActionRow(
+  { accent, inWatchlist, onRate, onToggleWatchlist, ctaLabel = 'Начать оценку' },
+  ref,
+) {
+  return (
+    <div className={styles.row} ref={ref} style={{ ['--film-accent-rgb' as string]: accent.rgb }}>
+      {/*
           One line only. A CTA that advertises its own unfinished state inside
           the button reads as a demo; the status belongs in the snackbar.
         */}
-        <button type="button" className={styles.primary} onClick={onRate} data-testid="film-rate">
-          {ctaLabel}
-        </button>
+      <button type="button" className={styles.primary} onClick={onRate} data-testid="film-rate">
+        {ctaLabel}
+      </button>
 
-        <button
-          type="button"
-          className={styles.bookmark}
-          data-active={inWatchlist}
-          aria-pressed={inWatchlist}
-          aria-label={inWatchlist ? 'Убрать из «Посмотреть позже»' : 'Посмотреть позже'}
-          onClick={onToggleWatchlist}
-          data-testid="watchlist-hero"
-        >
-          <span className={styles.icon} aria-hidden="true">
-            <BookmarkIcon filled={inWatchlist} />
-          </span>
-        </button>
-      </div>
-    );
-  },
-);
+      <button
+        type="button"
+        className={styles.bookmark}
+        data-active={inWatchlist}
+        aria-pressed={inWatchlist}
+        aria-label={inWatchlist ? 'Убрать из «Посмотреть позже»' : 'Посмотреть позже'}
+        onClick={onToggleWatchlist}
+        data-testid="watchlist-hero"
+      >
+        <span className={styles.icon} aria-hidden="true">
+          <BookmarkIcon filled={inWatchlist} />
+        </span>
+      </button>
+    </div>
+  );
+});

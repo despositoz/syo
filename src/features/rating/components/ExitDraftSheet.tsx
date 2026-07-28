@@ -27,9 +27,7 @@ export const ExitDraftSheet = ({
     title={editing ? 'Сохранить изменения позже?' : 'Ты не закончил оценку'}
     onClose={onClose}
   >
-    {!editing ? (
-      <p className={styles.text}>Продолжишь с этого места, когда вернёшься.</p>
-    ) : null}
+    {!editing ? <p className={styles.text}>Продолжишь с этого места, когда вернёшься.</p> : null}
 
     <div className={styles.actions}>
       <Button variant="primary" block onClick={onLeave} data-testid="exit-later">
@@ -38,7 +36,12 @@ export const ExitDraftSheet = ({
       <Button variant="secondary" block onClick={onClose}>
         Остаться
       </Button>
-      <Button variant="destructive" block onClick={() => void onDiscard()} data-testid="exit-discard">
+      <Button
+        variant="destructive"
+        block
+        onClick={() => void onDiscard()}
+        data-testid="exit-discard"
+      >
         {editing ? 'Отменить изменения' : 'Удалить черновик'}
       </Button>
     </div>

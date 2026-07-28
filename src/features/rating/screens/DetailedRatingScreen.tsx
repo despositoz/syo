@@ -85,20 +85,25 @@ export const DetailedRatingScreen = ({ filmId, aspectId }: DetailedRatingScreenP
     if (next.currentAspect && next.currentAspect !== aspectId) {
       setDirection('forward');
       haptics.trigger('aspectAdvance', `aspect:${next.currentAspect}`);
-      navigation.openRating(
-        { kind: 'rateAspect', filmId, aspectId: next.currentAspect },
-        true,
-      );
+      navigation.openRating({ kind: 'rateAspect', filmId, aspectId: next.currentAspect }, true);
     }
   }, [advance, navigation, filmId, aspectId, cancelAdvance, haptics]);
 
   const onCommit = useCallback(
     (value: RatingValue, source: 'tap' | 'drag' | 'keyboard') => {
-      void setAspect(aspectId, value);
       cancelAdvance();
-      // Keyboard never auto-advances: focus must not move under the user.
-      if (source === 'keyboard') return;
-      timer.current = setTimeout(() => void proceed(), AUTO_ADVANCE_MS);
+      void setAspect(aspectId, value).then(
+        () => {
+          // Keyboard never auto-advances: focus must not move under the user.
+          if (source === 'keyboard') return;
+          timer.current = setTimeout(() => void proceed(), AUTO_ADVANCE_MS);
+        },
+        () => {
+          // The answer did not reach storage. Staying put keeps it on screen
+          // next to the retry, instead of scrolling past a value that is only
+          // in memory.
+        },
+      );
     },
     [setAspect, aspectId, proceed, cancelAdvance],
   );
@@ -164,7 +169,12 @@ export const DetailedRatingScreen = ({ filmId, aspectId }: DetailedRatingScreenP
       }
       footer={
         value !== null ? (
-          <Button variant="secondary" block onClick={() => void proceed()} data-testid="aspect-next">
+          <Button
+            variant="secondary"
+            block
+            onClick={() => void proceed()}
+            data-testid="aspect-next"
+          >
             Дальше
           </Button>
         ) : null
@@ -207,6 +217,7 @@ export const DetailedRatingScreen = ({ filmId, aspectId }: DetailedRatingScreenP
             highLabel={aspect.highLabel}
             reducedMotion={reducedMotion}
             onHaptic={onStarHaptic}
+            onInteractionStart={cancelAdvance}
           />
 
           <p className={styles.state} aria-live="polite">

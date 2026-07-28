@@ -92,7 +92,9 @@ test.describe('Film Page hero', () => {
     await mockTelegram(page, { fullscreen: true });
     await openFilm(page);
 
-    const stage = page.locator('[class*="FilmPage-module__backdrop"] [class*="ImageStage"]').first();
+    const stage = page
+      .locator('[class*="FilmPage-module__backdrop"] [class*="ImageStage"]')
+      .first();
     await expect(stage).toHaveAttribute('data-status', 'failed');
 
     // The 2:3 poster must not be stretched across the landscape stage: the only

@@ -1,7 +1,13 @@
 import { routeToPath, pathToStack } from '../routes';
 import type { TelegramController } from '../telegram/TelegramController';
 import { useNavigationStore } from './navigationStore';
-import { isRatingRoute, type FilmRouteParams, type RatingRoute, type Route, type RootTab } from './navigationTypes';
+import {
+  isRatingRoute,
+  type FilmRouteParams,
+  type RatingRoute,
+  type Route,
+  type RootTab,
+} from './navigationTypes';
 import type { HapticManager } from '@shared/haptics/HapticManager';
 
 /**

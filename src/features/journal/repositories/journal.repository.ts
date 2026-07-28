@@ -60,10 +60,16 @@ export class IndexedDbSyncQueueRepository implements SyncQueueRepository {
 
 export const syncQueueRepository: SyncQueueRepository = new IndexedDbSyncQueueRepository();
 
+/**
+ * Adds a sync task from *inside* an already open transaction. Dexie joins the
+ * ambient transaction, so the task and the row it describes commit or fail
+ * together — that is the whole point of calling this instead of the repository.
+ */
+const enqueueWithin = (task: SyncTask): Promise<number> =>
+  db.syncQueue.add({ task, createdAt: Date.now(), attempts: 0 });
+
 export class IndexedDbJournalRepository implements JournalRepository {
   private readonly listeners = new Set<() => void>();
-
-  constructor(private readonly queue: SyncQueueRepository = syncQueueRepository) {}
 
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
@@ -102,7 +108,11 @@ export class IndexedDbJournalRepository implements JournalRepository {
     assertValidEntry(entry);
 
     const stored = await strictWrite(async () =>
-      db.transaction('rw', db.journal, async () => {
+      // The queue is in the same transaction as the entry itself: a saved entry
+      // without its sync task (or a task without its entry) would leave the two
+      // permanently out of step, and the caller would be told the save failed
+      // when in fact it had already happened.
+      db.transaction('rw', db.journal, db.syncQueue, async () => {
         const existing = await db.journal.get(entry.id);
         if (existing?.clientMutationId === entry.clientMutationId) return existing;
 
@@ -120,16 +130,16 @@ export class IndexedDbJournalRepository implements JournalRepository {
 
         await db.journal.put(next);
         for (const duplicate of sameFilm) await db.journal.delete(duplicate.id);
+        await enqueueWithin({
+          type: 'journalUpsert',
+          entryId: next.id,
+          clientMutationId: next.clientMutationId,
+          revision: next.revision,
+        });
         return next;
       }),
     );
 
-    await this.queue.enqueue({
-      type: 'journalUpsert',
-      entryId: stored.id,
-      clientMutationId: stored.clientMutationId,
-      revision: stored.revision,
-    });
     this.emit();
     return stored;
   }
@@ -144,13 +154,17 @@ export class IndexedDbJournalRepository implements JournalRepository {
       syncStatus: 'deleted',
       revision: entry.revision + 1,
     };
-    await strictWrite(() => db.journal.put(deleted));
-    await this.queue.enqueue({
-      type: 'journalDelete',
-      entryId: id,
-      clientMutationId: deleted.clientMutationId,
-      revision: deleted.revision,
-    });
+    await strictWrite(() =>
+      db.transaction('rw', db.journal, db.syncQueue, async () => {
+        await db.journal.put(deleted);
+        await enqueueWithin({
+          type: 'journalDelete',
+          entryId: id,
+          clientMutationId: deleted.clientMutationId,
+          revision: deleted.revision,
+        });
+      }),
+    );
     this.emit();
     return deleted;
   }
@@ -166,13 +180,17 @@ export class IndexedDbJournalRepository implements JournalRepository {
       syncStatus: 'local',
       revision: entry.revision + 1,
     };
-    await strictWrite(() => db.journal.put(restored));
-    await this.queue.enqueue({
-      type: 'journalUpsert',
-      entryId: id,
-      clientMutationId: restored.clientMutationId,
-      revision: restored.revision,
-    });
+    await strictWrite(() =>
+      db.transaction('rw', db.journal, db.syncQueue, async () => {
+        await db.journal.put(restored);
+        await enqueueWithin({
+          type: 'journalUpsert',
+          entryId: id,
+          clientMutationId: restored.clientMutationId,
+          revision: restored.revision,
+        });
+      }),
+    );
     this.emit();
     return restored;
   }

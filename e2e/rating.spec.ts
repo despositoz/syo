@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { cssVar, isTelegramBackVisible, mockTelegram, mockTmdb, pressTelegramBack } from './fixtures';
+import {
+  cssVar,
+  isTelegramBackVisible,
+  mockTelegram,
+  mockTmdb,
+  pressTelegramBack,
+} from './fixtures';
 
 /** Film page → "Начать оценку" → mode selector. */
 const openModeSelector = async (page: Page) => {

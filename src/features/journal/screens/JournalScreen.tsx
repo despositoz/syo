@@ -21,6 +21,9 @@ import styles from './JournalScreen.module.css';
  * Local entries render immediately — there is no skeleton over data that is
  * already on the device. Order: header, active draft, watch later, history.
  */
+/** Undo stays available this long after a destructive tap (spec §19.4). */
+const UNDO_WINDOW_MS = 6500;
+
 export const JournalScreen = () => {
   const navigation = useNavigationController();
 
@@ -62,6 +65,32 @@ export const JournalScreen = () => {
     (entry: JournalEntry) => navigation.openJournalEntry(entry.id),
     [navigation],
   );
+
+  /**
+   * Throwing away an unfinished rating is destructive and reachable by one
+   * small tap, so it is undoable: the draft is kept aside and put back on
+   * request. Undo is refused if a *new* draft has since been started — only one
+   * may exist, and the newer one is the one the user is looking at.
+   */
+  const deleteDraft = useCallback(() => {
+    const discarded = useRatingStore.getState().draft;
+    if (!discarded) return;
+
+    void discardDraft()
+      .then(() => {
+        showSnackbar('Черновик удалён', UNDO_WINDOW_MS, {
+          label: 'Вернуть',
+          onAction: () => {
+            if (useRatingStore.getState().draft) {
+              showSnackbar('Уже начата другая оценка');
+              return;
+            }
+            void useRatingStore.getState().restoreDiscarded(discarded);
+          },
+        });
+      })
+      .catch(() => showSnackbar('Не получилось удалить черновик'));
+  }, [discardDraft, showSnackbar]);
 
   const continueDraft = useCallback(() => {
     if (!draft) return;
@@ -112,14 +141,7 @@ export const JournalScreen = () => {
           </header>
 
           {draft ? (
-            <ActiveDraftCard
-              draft={draft}
-              onContinue={continueDraft}
-              onDelete={() => {
-                void discardDraft();
-                showSnackbar('Черновик удалён');
-              }}
-            />
+            <ActiveDraftCard draft={draft} onContinue={continueDraft} onDelete={deleteDraft} />
           ) : null}
 
           {watchlistItems.length ? (

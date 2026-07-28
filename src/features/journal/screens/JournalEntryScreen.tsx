@@ -3,7 +3,8 @@ import { useNavigationController, useServices } from '@app/appServices';
 import { formatScore } from '@domain/rating/rating.calculation';
 import { resultPhrase } from '@domain/rating/rating.constants';
 import { resumeTarget } from '@domain/rating/rating.machine';
-import type { JournalEntry } from '@domain/journal/journal.types';
+import { isActiveEntry, type JournalEntry } from '@domain/journal/journal.types';
+import type { RatingDraft } from '@domain/rating/rating.types';
 import { Sheet } from '@shared/ui/Sheet/Sheet';
 import { Button } from '@shared/ui/Button/Button';
 import { IconButton } from '@shared/ui/IconButton/IconButton';
@@ -14,6 +15,8 @@ import { OverallStars } from '@features/rating/components/OverallStars';
 import { RatingBreakdown } from '@features/rating/components/RatingBreakdown';
 import { FilmIdentity } from '@features/rating/components/FilmIdentity';
 import { useRatingStore } from '@features/rating/model/rating.store';
+import { replaceDraft, requestDraft } from '@features/rating/model/draftCoordinator';
+import { DraftConflictSheet } from '@features/rating/components/DraftConflictSheet';
 import { useJournalStore } from '../model/journal.store';
 import { journalRepository } from '../repositories/journal.repository';
 import styles from './JournalEntryScreen.module.css';
@@ -39,7 +42,6 @@ export const JournalEntryScreen = ({ entryId }: JournalEntryScreenProps) => {
   const entries = useJournalStore((state) => state.entries);
   const remove = useJournalStore((state) => state.remove);
   const restore = useJournalStore((state) => state.restore);
-  const startDraft = useRatingStore((state) => state.start);
   const showSnackbar = useSnackbarStore((state) => state.show);
 
   const [entry, setEntry] = useState<JournalEntry | null>(
@@ -47,6 +49,11 @@ export const JournalEntryScreen = ({ entryId }: JournalEntryScreenProps) => {
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [conflict, setConflict] = useState<{
+    reason: 'film' | 'mode';
+    mode: 'quick' | 'detailed';
+  } | null>(null);
+  const activeDraft = useRatingStore((state) => state.draft);
 
   useEffect(() => {
     const found = entries.find((item) => item.id === entryId);
@@ -57,29 +64,18 @@ export const JournalEntryScreen = ({ entryId }: JournalEntryScreenProps) => {
     // Deep link or a cold start: read it straight from storage.
     let active = true;
     void journalRepository.getById(entryId).then((stored) => {
-      if (active && stored) setEntry(stored);
+      // A tombstone is not an entry: a direct link to a deleted rating must not
+      // resurrect it on screen.
+      if (active && stored && isActiveEntry(stored)) setEntry(stored);
     });
     return () => {
       active = false;
     };
   }, [entries, entryId]);
 
-  const edit = useCallback(
-    async (mode: 'quick' | 'detailed') => {
-      if (!entry) return;
-      setMenuOpen(false);
-      const created = await startDraft({
-        film: entry.film,
-        mode,
-        editingEntryId: entry.id,
-        quickScore: mode === 'quick' ? entry.quickScore : null,
-        ...(mode === 'detailed' && entry.aspects ? { aspects: entry.aspects } : {}),
-        ...(mode === 'detailed' && entry.mode === 'quick'
-          ? { previousQuickScore: entry.quickScore }
-          : {}),
-      });
-      const target = resumeTarget(created);
-      const filmId = entry.filmId;
+  const openDraft = useCallback(
+    (draft: RatingDraft, filmId: number) => {
+      const target = resumeTarget(draft);
       if (target.screen === 'aspect') {
         navigation.openRating({ kind: 'rateAspect', filmId, aspectId: target.aspectId });
       } else if (target.screen === 'quick') {
@@ -88,8 +84,48 @@ export const JournalEntryScreen = ({ entryId }: JournalEntryScreenProps) => {
         navigation.openRating({ kind: 'rateResult', filmId });
       }
     },
-    [entry, startDraft, navigation],
+    [navigation],
   );
+
+  const editOptions = useCallback(
+    (mode: 'quick' | 'detailed') => ({
+      film: entry!.film,
+      mode,
+      editingEntryId: entry!.id,
+      quickScore: mode === 'quick' ? entry!.quickScore : null,
+      ...(mode === 'detailed' && entry!.aspects ? { aspects: entry!.aspects } : {}),
+      ...(mode === 'detailed' && entry!.mode === 'quick'
+        ? { previousQuickScore: entry!.quickScore }
+        : {}),
+    }),
+    [entry],
+  );
+
+  /**
+   * Editing goes through the same coordinator as any other start: an unfinished
+   * rating of a *different* film must not be destroyed just because the user
+   * tapped "изменить" here.
+   */
+  const edit = useCallback(
+    async (mode: 'quick' | 'detailed') => {
+      if (!entry) return;
+      setMenuOpen(false);
+
+      const outcome = await requestDraft(editOptions(mode));
+      if (outcome.kind === 'conflict' || outcome.kind === 'modeConflict') {
+        setConflict({ reason: outcome.kind === 'modeConflict' ? 'mode' : 'film', mode });
+        return;
+      }
+      openDraft(outcome.draft, entry.filmId);
+    },
+    [entry, editOptions, openDraft],
+  );
+
+  const editAfterConfirm = useCallback(async () => {
+    if (!entry || !conflict) return;
+    setConflict(null);
+    openDraft(await replaceDraft(editOptions(conflict.mode)), entry.filmId);
+  }, [entry, conflict, editOptions, openDraft]);
 
   const confirmDelete = useCallback(async () => {
     if (!entry) return;
@@ -130,7 +166,11 @@ export const JournalEntryScreen = ({ entryId }: JournalEntryScreenProps) => {
           <span />
         )}
 
-        <IconButton label="Действия с записью" onClick={() => setMenuOpen(true)} data-testid="entry-menu">
+        <IconButton
+          label="Действия с записью"
+          onClick={() => setMenuOpen(true)}
+          data-testid="entry-menu"
+        >
           <MenuIcon />
         </IconButton>
       </header>
@@ -146,15 +186,25 @@ export const JournalEntryScreen = ({ entryId }: JournalEntryScreenProps) => {
             showNumber
           />
           <p className={styles.phrase}>{resultPhrase(entry.displayScore)}</p>
-          <p className="sr-only">
-            Твоя оценка {formatScore(entry.rawScore)} из 5
-          </p>
+          <p className="sr-only">Твоя оценка {formatScore(entry.rawScore)} из 5</p>
         </div>
 
         {entry.mode === 'detailed' && entry.aspects ? (
           <RatingBreakdown aspects={entry.aspects} />
         ) : null}
       </div>
+
+      <DraftConflictSheet
+        open={conflict !== null && activeDraft !== null}
+        draft={activeDraft}
+        reason={conflict?.reason ?? 'film'}
+        onClose={() => setConflict(null)}
+        onContinue={() => {
+          setConflict(null);
+          if (activeDraft) openDraft(activeDraft, activeDraft.film.filmId);
+        }}
+        onDiscard={editAfterConfirm}
+      />
 
       <Sheet open={menuOpen} title="Запись" onClose={() => setMenuOpen(false)}>
         <div className={styles.menu}>

@@ -24,7 +24,47 @@ export const Sheet = ({ open, title, onClose, children }: SheetProps) => {
     panelRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      /*
+       * Keep Tab inside the dialog. `aria-modal` tells assistive tech the rest
+       * of the page is inert, but it does not stop the browser tabbing into
+       * the controls behind the scrim — the keyboard would simply walk out of
+       * a modal that claims to be modal.
+       */
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = [
+        // Scoped to the dialog's own ref, not the document: a focus trap has to
+        // enumerate what is focusable inside it, and there is no ref-based way
+        // to ask that question.
+        // eslint-disable-next-line no-restricted-syntax
+        ...panel.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((node) => node.offsetParent !== null || node === document.activeElement);
+
+      if (!focusable.length) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      const active = document.activeElement;
+
+      if (event.shiftKey && (active === first || active === panel)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {

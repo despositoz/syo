@@ -283,7 +283,10 @@ export const FilmPage = ({ filmId, initialTitle }: FilmPageProps) => {
             </div>
 
             <div className={styles.heroText}>
-              <FilmTitleGroup title={view.title || initialTitle || ''} presentation={presentation} />
+              <FilmTitleGroup
+                title={view.title || initialTitle || ''}
+                presentation={presentation}
+              />
 
               {meta ? <p className={styles.meta}>{meta}</p> : null}
 

@@ -42,7 +42,10 @@ export const setJournalRepository = (next: JournalRepository): void => {
  * Turns a finished draft into an entry. Editing keeps the entry id — that is
  * what stops a second card appearing for the same film (spec §18.1).
  */
-export const entryFromDraft = (draft: RatingDraft, existing?: JournalEntry | null): JournalEntry => {
+export const entryFromDraft = (
+  draft: RatingDraft,
+  existing?: JournalEntry | null,
+): JournalEntry => {
   const now = new Date().toISOString();
   const detailed = draft.mode === 'detailed';
   const result = detailed ? calculateResult(draft.aspects) : quickResult(draft.quickScore ?? 0);

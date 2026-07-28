@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createTelegramFake, detailsFixture, installFetchMock, renderApp, resetAppState } from './harness';
+import {
+  createTelegramFake,
+  detailsFixture,
+  installFetchMock,
+  renderApp,
+  resetAppState,
+} from './harness';
 import { useNavigationStore } from '@app/navigation/navigationStore';
 import { db } from '@shared/storage/db';
 import { emptyFilm } from '@entities/film/film.model';
@@ -136,7 +142,10 @@ describe('Flow 2 — detailed rating and rounding', () => {
 describe('Flow 3 — a draft survives a reload', () => {
   it('resumes on the aspect it was left on, with values intact', async () => {
     const user = userEvent.setup();
-    const { unmount } = renderApp({ telegram: createTelegramFake(), path: `/rate/${FILM_ID}/mode` });
+    const { unmount } = renderApp({
+      telegram: createTelegramFake(),
+      path: `/rate/${FILM_ID}/mode`,
+    });
 
     await user.click(await screen.findByTestId('mode-detailed'));
     await rateStars(4);
@@ -185,7 +194,7 @@ describe('Flow 4/5 — only one active draft', () => {
     expect(useRatingStore.getState().draft?.film.filmId).toBe(999);
   });
 
-  it('discards the old draft only on an explicit choice', async () => {
+  it('discards the old draft only on an explicit choice, and then starts the new one', async () => {
     const user = userEvent.setup();
     await useRatingStore
       .getState()
@@ -195,8 +204,12 @@ describe('Flow 4/5 — only one active draft', () => {
     await user.click(await screen.findByTestId('mode-quick'));
     await user.click(await screen.findByTestId('conflict-discard'));
 
-    await waitFor(() => expect(useRatingStore.getState().draft).toBeNull());
-    expect(await db.ratingDrafts.get('active')).toBeUndefined();
+    // The old film is gone and the requested one is in progress: confirming a
+    // destructive choice must complete the action the user asked for, not just
+    // delete and leave them on an unchanged screen.
+    await waitFor(() => expect(useRatingStore.getState().draft?.film.filmId).toBe(FILM_ID));
+    expect(useRatingStore.getState().draft?.mode).toBe('quick');
+    expect((await db.ratingDrafts.get('active'))?.film.filmId).toBe(FILM_ID);
   });
 });
 
@@ -225,7 +238,13 @@ describe('Flow 6/7 — editing never duplicates a film', () => {
 
   it('turns a quick entry into a detailed one without a second entry', async () => {
     let draft = createDraft({ film: snapshot, mode: 'detailed' });
-    for (const id of ['story', 'performance', 'directionVisual', 'soundMusic', 'aftertaste'] as const) {
+    for (const id of [
+      'story',
+      'performance',
+      'directionVisual',
+      'soundMusic',
+      'aftertaste',
+    ] as const) {
       draft = setAspectScore(draft, id, 4);
     }
     await useJournalStore.getState().saveFromDraft({ ...draft, previousQuickScore: 3 });
@@ -302,9 +321,7 @@ describe('leaving the flow after a save', () => {
 
     // Unwinding the pushed history entries must not restore the old route:
     // the popstate that follows would otherwise put the user back on the feed.
-    await waitFor(() =>
-      expect(useNavigationStore.getState().activeTab).toBe('diary'),
-    );
+    await waitFor(() => expect(useNavigationStore.getState().activeTab).toBe('diary'));
     expect(useNavigationStore.getState().stack).toHaveLength(1);
     expect(await screen.findByRole('heading', { name: 'Дневник' })).toBeInTheDocument();
   });

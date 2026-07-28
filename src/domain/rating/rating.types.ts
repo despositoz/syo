@@ -8,11 +8,7 @@
 export type RatingMode = 'quick' | 'detailed';
 
 export type RatingAspectId =
-  | 'story'
-  | 'performance'
-  | 'directionVisual'
-  | 'soundMusic'
-  | 'aftertaste';
+  'story' | 'performance' | 'directionVisual' | 'soundMusic' | 'aftertaste';
 
 export type RatingValue = 0 | 1 | 2 | 3 | 4 | 5;
 

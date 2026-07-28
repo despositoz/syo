@@ -60,7 +60,11 @@ export const RatingResultScreen = ({ filmId }: RatingResultScreenProps) => {
         };
         // A failing watchlist write must not undo a saved rating.
         await toggleWatchlist(summary as never).catch(() => undefined);
-        showSnackbar('Оценка сохранена. Фильм убран из «Посмотреть позже»', 6000);
+        showSnackbar('Оценка сохранена. Фильм убран из «Посмотреть позже»', 6000, {
+          // Undo restores membership only — the rating itself stays saved.
+          label: 'Вернуть в список',
+          onAction: () => void toggleWatchlist(summary as never).catch(() => undefined),
+        });
       } else {
         showSnackbar('Оценка сохранена');
       }

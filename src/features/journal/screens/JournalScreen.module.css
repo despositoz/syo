@@ -14,8 +14,8 @@
   gap: var(--space-6);
   padding: calc(var(--content-safe-top) + var(--space-4))
     calc(var(--content-safe-right) + var(--space-4))
-    /* Clear of the floating bottom bar and the home indicator. */
-    calc(var(--safe-bottom) + 132px) calc(var(--content-safe-left) + var(--space-4));
+    /* Clear of the floating bottom bar and the home indicator. */ calc(var(--safe-bottom) + 132px)
+    calc(var(--content-safe-left) + var(--space-4));
 }
 
 .header {

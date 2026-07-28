@@ -106,7 +106,11 @@
 }
 
 .control:not([data-unrated]) .star[data-filled]:nth-child(n + 4) .shape :global(.star-fill) {
-  fill: color-mix(in srgb, var(--color-text-on-media) 72%, rgb(var(--film-accent-rgb, 111, 42, 53)));
+  fill: color-mix(
+    in srgb,
+    var(--color-text-on-media) 72%,
+    rgb(var(--film-accent-rgb, 111, 42, 53))
+  );
 }
 
 .star[data-current] {

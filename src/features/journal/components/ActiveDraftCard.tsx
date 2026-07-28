@@ -48,7 +48,12 @@ export const ActiveDraftCard = ({ draft, onContinue, onDelete }: ActiveDraftCard
       </span>
     </button>
 
-    <IconButton label="Удалить черновик" variant="plain" onClick={onDelete} data-testid="draft-delete">
+    <IconButton
+      label="Удалить черновик"
+      variant="plain"
+      onClick={onDelete}
+      data-testid="draft-delete"
+    >
       <CloseIcon />
     </IconButton>
   </div>

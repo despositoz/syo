@@ -13,9 +13,8 @@ vi.mock('./film.presentation', () => ({
   prepareFilmPresentationCached: (...args: unknown[]) => prepare(...args),
 }));
 
-const { openFilmWithPreflight, resetFilmOpenings, startFilmOpening, takeFilmOpening } = await import(
-  './filmOpening'
-);
+const { openFilmWithPreflight, resetFilmOpenings, startFilmOpening, takeFilmOpening } =
+  await import('./filmOpening');
 
 const summary = (id = 7): FilmSummary => summaryOf({ ...emptyFilm(id, 'Фильм'), year: '2024' });
 

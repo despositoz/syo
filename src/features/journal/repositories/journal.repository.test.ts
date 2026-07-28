@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@shared/storage/db';
 import { IndexedDbJournalRepository, IndexedDbSyncQueueRepository } from './journal.repository';
 import { IndexedDbRatingDraftRepository } from '@features/rating/repositories/ratingDraft.repository';
@@ -167,7 +167,7 @@ describe('journal repository', () => {
 describe('sync queue', () => {
   it('queues a save and clears it once synced', async () => {
     const queue = new IndexedDbSyncQueueRepository();
-    const repository = new IndexedDbJournalRepository(queue);
+    const repository = new IndexedDbJournalRepository();
     await repository.upsert(entry());
 
     const pending = await queue.listPending();
@@ -176,6 +176,25 @@ describe('sync queue', () => {
 
     await queue.markSynced(pending[0]!.id);
     expect(await queue.listPending()).toHaveLength(0);
+  });
+
+  it('never saves an entry without its sync task', async () => {
+    const repository = new IndexedDbJournalRepository();
+    const queue = new IndexedDbSyncQueueRepository();
+
+    // Break the queue write, then attempt a save.
+    const add = db.syncQueue.add.bind(db.syncQueue);
+    vi.spyOn(db.syncQueue, 'add').mockRejectedValueOnce(new Error('queue full'));
+
+    await expect(repository.upsert(entry())).rejects.toThrow();
+
+    // Both sides rolled back together: no orphan entry claiming to be saved
+    // while the caller was told the save failed.
+    expect(await repository.listActive()).toHaveLength(0);
+    expect(await queue.listPending()).toHaveLength(0);
+
+    vi.mocked(db.syncQueue.add).mockRestore();
+    expect(typeof add).toBe('function');
   });
 
   it('records an error without losing the task', async () => {
@@ -202,7 +221,9 @@ describe('rating draft repository', () => {
 
   it('keeps a deliberate zero through storage', async () => {
     const repository = new IndexedDbRatingDraftRepository(new MemoryStorage());
-    await repository.saveActive(setAspectScore(createDraft({ film, mode: 'detailed' }), 'story', 0));
+    await repository.saveActive(
+      setAspectScore(createDraft({ film, mode: 'detailed' }), 'story', 0),
+    );
 
     const restored = await repository.getActive();
     expect(restored?.aspects.story).toBe(0);
@@ -258,7 +279,16 @@ describe('schema migration', () => {
     await db.open();
     const names = db.tables.map((table) => table.name).sort();
     expect(names).toEqual(
-      ['feed', 'films', 'journal', 'preferences', 'presentations', 'ratingDrafts', 'syncQueue', 'watchlist'].sort(),
+      [
+        'feed',
+        'films',
+        'journal',
+        'preferences',
+        'presentations',
+        'ratingDrafts',
+        'syncQueue',
+        'watchlist',
+      ].sort(),
     );
     expect(db.verno).toBeGreaterThanOrEqual(2);
   });

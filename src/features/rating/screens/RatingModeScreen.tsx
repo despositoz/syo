@@ -4,6 +4,7 @@ import { filmRepository } from '@entities/film/film.repository';
 import { resumeTarget } from '@domain/rating/rating.machine';
 import type { FilmSnapshot } from '@domain/rating/rating.types';
 import { useRatingStore, draftMatchesFilm, snapshotFromFilm } from '../model/rating.store';
+import { replaceDraft, requestDraft } from '../model/draftCoordinator';
 import { useJournalStore } from '@features/journal/model/journal.store';
 import type { JournalEntry } from '@domain/journal/journal.types';
 import { RatingFlowShell } from '../components/RatingFlowShell';
@@ -29,15 +30,16 @@ export const RatingModeScreen = ({ filmId }: RatingModeScreenProps) => {
 
   const draft = useRatingStore((state) => state.draft);
   const hydrated = useRatingStore((state) => state.hydrated);
-  const start = useRatingStore((state) => state.start);
-  const discard = useRatingStore((state) => state.discard);
 
   const entries = useJournalStore((state) => state.entries);
   const existingEntry: JournalEntry | null =
     entries.find((entry) => entry.filmId === filmId) ?? null;
 
   const [film, setFilm] = useState<FilmSnapshot | null>(null);
-  const [conflictOpen, setConflictOpen] = useState(false);
+  const [conflict, setConflict] = useState<{
+    reason: 'film' | 'mode';
+    mode: 'quick' | 'detailed';
+  } | null>(null);
 
   /* The snapshot is taken from local data: the flow must work offline. */
   useEffect(() => {
@@ -55,33 +57,54 @@ export const RatingModeScreen = ({ filmId }: RatingModeScreenProps) => {
     };
   }, [filmId, existingEntry]);
 
-  const otherDraft = draft && !draftMatchesFilm(draft, filmId) ? draft : null;
+  const optionsFor = useCallback(
+    (mode: 'quick' | 'detailed') => ({
+      film: film!,
+      mode,
+      ...(existingEntry
+        ? {
+            editingEntryId: existingEntry.id,
+            quickScore: mode === 'quick' ? existingEntry.quickScore : null,
+            ...(existingEntry.aspects && mode === 'detailed'
+              ? { aspects: existingEntry.aspects }
+              : {}),
+          }
+        : {}),
+    }),
+    [film, existingEntry],
+  );
 
+  /**
+   * Every start goes through the coordinator, so picking a mode can never wipe
+   * an unfinished rating — neither another film's nor this film's own.
+   */
   const begin = useCallback(
     async (mode: 'quick' | 'detailed') => {
       if (!film) return;
-      if (otherDraft) {
-        setConflictOpen(true);
-        return;
+      const outcome = await requestDraft(optionsFor(mode));
+
+      switch (outcome.kind) {
+        case 'started':
+        case 'resumed':
+          openScreen(resumeTarget(outcome.draft), false);
+          return;
+        case 'conflict':
+          setConflict({ reason: 'film', mode });
+          return;
+        case 'modeConflict':
+          setConflict({ reason: 'mode', mode });
       }
-      const options = {
-        film,
-        mode,
-        ...(existingEntry
-          ? {
-              editingEntryId: existingEntry.id,
-              quickScore: mode === 'quick' ? existingEntry.quickScore : null,
-              ...(existingEntry.aspects && mode === 'detailed'
-                ? { aspects: existingEntry.aspects }
-                : {}),
-            }
-          : {}),
-      };
-      const created = await start(options);
-      openScreen(resumeTarget(created), false);
     },
-    [film, otherDraft, existingEntry, start, openScreen],
+    [film, optionsFor, openScreen],
   );
+
+  /** Only reachable from the confirmation sheet. */
+  const beginAfterConfirm = useCallback(async () => {
+    if (!film || !conflict) return;
+    setConflict(null);
+    const created = await replaceDraft(optionsFor(conflict.mode));
+    openScreen(resumeTarget(created), false);
+  }, [film, conflict, optionsFor, openScreen]);
 
   const resumeOwnDraft = useCallback(() => {
     if (!draft) return;
@@ -101,7 +124,8 @@ export const RatingModeScreen = ({ filmId }: RatingModeScreenProps) => {
   }
 
   const ownDraft = draftMatchesFilm(draft, filmId) ? draft : null;
-  const detailedTitle = existingEntry?.mode === 'detailed' ? 'Изменить оценку' : 'Разобрать впечатление';
+  const detailedTitle =
+    existingEntry?.mode === 'detailed' ? 'Изменить оценку' : 'Разобрать впечатление';
   const quickTitle = existingEntry ? 'Изменить быструю оценку' : 'Быстрая оценка';
 
   return (
@@ -155,22 +179,22 @@ export const RatingModeScreen = ({ filmId }: RatingModeScreenProps) => {
       </div>
 
       <DraftConflictSheet
-        open={conflictOpen && otherDraft !== null}
-        draft={otherDraft}
-        onClose={() => setConflictOpen(false)}
+        open={conflict !== null && draft !== null}
+        draft={draft}
+        reason={conflict?.reason ?? 'film'}
+        onClose={() => setConflict(null)}
         onContinue={() => {
-          setConflictOpen(false);
-          if (otherDraft) {
-            navigation.openRating(
-              { kind: 'rateMode', filmId: otherDraft.film.filmId },
-              false,
-            );
+          setConflict(null);
+          if (!draft) return;
+          // Resume exactly where it was left, not on its mode selector.
+          if (draftMatchesFilm(draft, filmId)) {
+            openScreen(resumeTarget(draft), false);
+            return;
           }
+          navigation.openRating({ kind: 'rateMode', filmId: draft.film.filmId }, false);
         }}
-        onDiscard={async () => {
-          setConflictOpen(false);
-          await discard();
-        }}
+        // Discarding continues straight into the mode the user picked.
+        onDiscard={beginAfterConfirm}
       />
     </RatingFlowShell>
   );

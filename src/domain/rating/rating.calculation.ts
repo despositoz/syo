@@ -60,7 +60,13 @@ export const calculateProvisional = (aspects: AspectScores): ProvisionalResult =
   const confidence = CONFIDENCE_BY_COMPLETED[completed] ?? 1;
 
   if (completed === 0) {
-    return { rawAverage: 0, displayScore: 0, formulaVersion: FORMULA_VERSION, completed, confidence };
+    return {
+      rawAverage: 0,
+      displayScore: 0,
+      formulaVersion: FORMULA_VERSION,
+      completed,
+      confidence,
+    };
   }
 
   const rawAverage = roundRaw(values.reduce<number>((sum, value) => sum + value, 0) / completed);

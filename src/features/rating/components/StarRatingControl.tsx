@@ -32,6 +32,8 @@ export interface StarRatingControlProps {
   reducedMotion?: boolean;
   /** Semantic haptic, throttled by the HapticManager upstream. */
   onHaptic?: (value: RatingValue, reachedMaximum: boolean) => void;
+  /** Fired on pointerdown so the parent can cancel pending timers. */
+  onInteractionStart?: () => void;
   size?: 'large' | 'compact';
 }
 
@@ -60,6 +62,7 @@ export const StarRatingControl = ({
   disabled = false,
   reducedMotion = false,
   onHaptic,
+  onInteractionStart,
   size = 'large',
 }: StarRatingControlProps) => {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -95,13 +98,25 @@ export const StarRatingControl = ({
   }, []);
 
   const applyValue = useCallback(
-    (next: RatingValue, source: RatingSource, commit: boolean) => {
+    (
+      next: RatingValue,
+      source: RatingSource,
+      commit: boolean,
+      /**
+       * The very first press is silent. Until the gesture has proven itself
+       * horizontal it may still turn out to be a scroll, and a buzz for a
+       * value the user never chose is worse than a late one.
+       */
+      haptic = true,
+    ) => {
       const changed = lastValue.current !== next;
       if (changed) {
         lastValue.current = next;
         setPreview(next);
         onPreview?.(next, source);
         if (next !== 5) maximumFired.current = false;
+      }
+      if (haptic && (changed || commit)) {
         const reachedMaximum = next === 5 && !maximumFired.current;
         if (reachedMaximum) maximumFired.current = true;
         onHaptic?.(next, reachedMaximum);
@@ -143,9 +158,14 @@ export const StarRatingControl = ({
     maximumFired.current = false;
     setDragging(true);
 
+    // Touching the control cancels anything the parent had pending, such as an
+    // auto-advance timer — the screen must not move out from under the finger.
+    onInteractionStart?.();
+
     // Press preview is immediate: the finger must never wait for a frame.
+    // Silent, though: the axis is still undecided (see applyValue).
     writeFollow(fractionFromPosition(event.clientX, geometry.current));
-    applyValue(valueFromPosition(event.clientX, geometry.current), 'tap', false);
+    applyValue(valueFromPosition(event.clientX, geometry.current), 'tap', false, false);
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -166,6 +186,8 @@ export const StarRatingControl = ({
       if (dx > 4) {
         intent.current = 'horizontal';
         trackRef.current?.setPointerCapture?.(event.pointerId);
+        // Now the gesture is ours: the value under the finger earns its haptic.
+        onHaptic?.(lastValue.current ?? 0, false);
       } else {
         return;
       }

@@ -199,19 +199,22 @@ describe('cached presentation', () => {
 
   it('does not retry a logo that is unusable by nature', async () => {
     // First open: the artwork itself is unreadable → durable decision.
-    const first = await prepareFilmPresentationCached(
-      film({ logoCandidates: [logoCandidate()] }),
-      { pipeline: pipeline(), canvasFactory: () => null },
-    );
+    const first = await prepareFilmPresentationCached(film({ logoCandidates: [logoCandidate()] }), {
+      pipeline: pipeline(),
+      canvasFactory: () => null,
+    });
     expect(first.titleReason).toBe('unsafe');
     expect((await db.presentations.get(1))?.mode).toBe('text');
 
     // Second open: the logo is never fetched again.
     const load = vi.fn(() => Promise.resolve(fakeImage));
-    const second = await prepareFilmPresentationCached(film({ logoCandidates: [logoCandidate()] }), {
-      pipeline: pipeline(load),
-      canvasFactory: canvasOf([250, 250, 250, 255]),
-    });
+    const second = await prepareFilmPresentationCached(
+      film({ logoCandidates: [logoCandidate()] }),
+      {
+        pipeline: pipeline(load),
+        canvasFactory: canvasOf([250, 250, 250, 255]),
+      },
+    );
 
     expect(second.titleMode).toBe('text');
     expect(load).not.toHaveBeenCalled();
@@ -219,24 +222,22 @@ describe('cached presentation', () => {
 
   it('retries a logo that merely lost the budget last time', async () => {
     // A slow first open falls back to text — but not permanently.
-    const first = await prepareFilmPresentationCached(
-      film({ logoCandidates: [logoCandidate()] }),
-      {
-        pipeline: pipeline(
-          () => new Promise((resolve) => setTimeout(() => resolve(fakeImage), 300)),
-        ),
-        canvasFactory: canvasOf([250, 250, 250, 255]),
-        budgetMs: 30,
-      },
-    );
+    const first = await prepareFilmPresentationCached(film({ logoCandidates: [logoCandidate()] }), {
+      pipeline: pipeline(() => new Promise((resolve) => setTimeout(() => resolve(fakeImage), 300))),
+      canvasFactory: canvasOf([250, 250, 250, 255]),
+      budgetMs: 30,
+    });
     expect(first.titleReason).toBe('timeout');
     expect(await db.presentations.get(1)).toBeUndefined();
 
     // Warm cache on the next opening: the logo now wins.
-    const second = await prepareFilmPresentationCached(film({ logoCandidates: [logoCandidate()] }), {
-      pipeline: pipeline(),
-      canvasFactory: canvasOf([250, 250, 250, 255]),
-    });
+    const second = await prepareFilmPresentationCached(
+      film({ logoCandidates: [logoCandidate()] }),
+      {
+        pipeline: pipeline(),
+        canvasFactory: canvasOf([250, 250, 250, 255]),
+      },
+    );
 
     expect(second.titleMode).toBe('logo');
   });

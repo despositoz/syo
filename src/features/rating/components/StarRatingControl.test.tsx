@@ -189,12 +189,29 @@ describe('StarRatingControl haptics', () => {
     expect(maxima).toHaveLength(1);
   });
 
-  it('reports a haptic for a deliberate zero', () => {
+  it('stays silent on the press itself, then reports the committed zero', () => {
     stubGeometry();
     const { slider, onHaptic } = setup();
 
+    // The axis is still undecided here — the gesture may yet turn out to be a
+    // scroll, and a buzz for a value nobody chose is worse than a late one.
     fire(slider, 'pointerdown', 10);
+    expect(onHaptic).not.toHaveBeenCalled();
+
+    fire(slider, 'pointerup', 10);
     expect(onHaptic).toHaveBeenCalledWith(0, false);
+  });
+
+  it('does not buzz when the touch turns into a vertical scroll', () => {
+    stubGeometry();
+    const { slider, onHaptic, onCommit } = setup();
+
+    fire(slider, 'pointerdown', 200, 20);
+    fire(slider, 'pointermove', 202, 60);
+    fire(slider, 'pointerup', 202, 60);
+
+    expect(onHaptic).not.toHaveBeenCalled();
+    expect(onCommit).not.toHaveBeenCalled();
   });
 });
 

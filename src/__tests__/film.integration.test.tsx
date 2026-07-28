@@ -174,9 +174,7 @@ describe('film page', () => {
 
     // The element mounts empty and fills from IndexedDB — assert the content,
     // not just its presence.
-    await waitFor(() =>
-      expect(screen.getByTestId('film-title')).toHaveTextContent('Офлайн фильм'),
-    );
+    await waitFor(() => expect(screen.getByTestId('film-title')).toHaveTextContent('Офлайн фильм'));
     expect(await screen.findByText('Описание из локального кэша.')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

@@ -45,6 +45,10 @@ export interface RatingState {
   discard: () => Promise<void>;
   /** Best-effort write for pagehide / visibilitychange. */
   flush: () => Promise<void>;
+  /** Writes the current draft again after a storage failure. */
+  retrySave: () => Promise<void>;
+  /** Puts a just-discarded draft back — the Undo of `discard`. */
+  restoreDiscarded: (draft: RatingDraft) => Promise<void>;
   clearStorageError: () => void;
 }
 
@@ -58,8 +62,12 @@ export const setRatingDraftRepository = (next: RatingDraftRepository): void => {
 export const useRatingStore = create<RatingState>((set, get) => {
   /**
    * Applies a pure transition and persists it. The in-memory draft is updated
-   * first so the UI never waits for IndexedDB, and a storage failure surfaces
-   * as state rather than as an exception in an event handler.
+   * first so the UI never waits for IndexedDB.
+   *
+   * A failed write is recorded in `storageError` *and* rethrown. Swallowing it
+   * told the caller everything was fine while the answer existed only in
+   * memory — the flow would happily carry on and a force-close would lose an
+   * answer the user had already seen confirmed.
    */
   const commit = async (next: RatingDraft): Promise<void> => {
     set({ draft: next });
@@ -67,7 +75,9 @@ export const useRatingStore = create<RatingState>((set, get) => {
       await repository.saveActive(next);
       if (get().storageError) set({ storageError: null });
     } catch (error) {
-      set({ storageError: error instanceof StorageError ? error : new StorageError('unknown', error) });
+      const failure = error instanceof StorageError ? error : new StorageError('unknown', error);
+      set({ storageError: failure });
+      throw failure;
     }
   };
 
@@ -122,13 +132,37 @@ export const useRatingStore = create<RatingState>((set, get) => {
       await commit(upgradeToDetailed(draft));
     },
 
+    /**
+     * Clears the draft from storage *first*. Wiping it from memory and then
+     * ignoring a failed delete would resurrect it on the next launch — the user
+     * would find a rating they had explicitly thrown away.
+     */
     discard: async () => {
+      try {
+        await repository.deleteActive();
+      } catch (error) {
+        const failure = error instanceof StorageError ? error : new StorageError('unknown', error);
+        set({ storageError: failure });
+        throw failure;
+      }
       set({ draft: null, storageError: null });
-      await repository.deleteActive().catch(() => undefined);
     },
 
     flush: async () => {
       await repository.flush().catch(() => undefined);
+    },
+
+    retrySave: async () => {
+      const draft = get().draft;
+      if (!draft) return;
+      await commit(draft);
+    },
+
+    restoreDiscarded: async (draft) => {
+      // Refuses if something new was started meanwhile: two active drafts must
+      // never exist, and the newer one wins.
+      if (get().draft) return;
+      await commit(draft);
     },
 
     clearStorageError: () => set({ storageError: null }),
