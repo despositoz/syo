@@ -2,6 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  /*
+   * Artefacts (screenshots, the resize recording) are produced on request, not
+   * on every run: they assert nothing and they write files. Opt in with
+   * SYO_ARTIFACTS=1.
+   */
+  testIgnore: process.env.SYO_ARTIFACTS ? [] : ['**/artifacts.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
