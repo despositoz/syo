@@ -16,6 +16,7 @@ import {
   type WritingScreen,
 } from '@domain/writing/writing.types';
 import { StorageError } from '@shared/storage/db';
+import type { AssistantOperation } from '@domain/writing/writing.types';
 import type { AssistantError } from '../gateway/assistant.gateway';
 import {
   activeDraftRepository,
@@ -44,6 +45,12 @@ export interface WritingState {
   assistantBusy: boolean;
   /** The last assistant failure, in a form the UI can speak about. */
   assistantError: AssistantError | null;
+  /**
+   * What failed, so "Повторить" repeats the same logical request. Kept in the
+   * store and not in a component: the screen unmounts while the request is in
+   * the air, and a retry button that forgets what to retry is not a retry.
+   */
+  assistantRetry: { operation: AssistantOperation; requestId: string } | null;
 
   hydrate: () => Promise<void>;
   start: (options: CreateWritingDraftOptions) => Promise<WritingDraft>;
@@ -61,7 +68,10 @@ export interface WritingState {
   retrySave: () => Promise<void>;
   clearStorageError: () => void;
   setAssistantBusy: (busy: boolean) => void;
-  setAssistantError: (error: AssistantError | null) => void;
+  setAssistantError: (
+    error: AssistantError | null,
+    retry?: { operation: AssistantOperation; requestId: string } | null,
+  ) => void;
 }
 
 let repository: ActiveDraftRepository = activeDraftRepository;
@@ -104,6 +114,7 @@ export const useWritingStore = create<WritingState>((set, get) => {
     dirty: false,
     assistantBusy: false,
     assistantError: null,
+    assistantRetry: null,
 
     hydrate: async () => {
       const stored = await repository.getActive().catch(() => null);
@@ -198,6 +209,7 @@ export const useWritingStore = create<WritingState>((set, get) => {
     clearStorageError: () => set({ storageError: null }),
 
     setAssistantBusy: (assistantBusy) => set({ assistantBusy }),
-    setAssistantError: (assistantError) => set({ assistantError }),
+    setAssistantError: (assistantError, retry) =>
+      set({ assistantError, assistantRetry: assistantError ? (retry ?? null) : null }),
   };
 });

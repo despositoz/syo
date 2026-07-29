@@ -150,7 +150,10 @@ export class HttpAssistantGateway implements AssistantGateway {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? ASSISTANT_TIMEOUT_MS);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      this.options.timeoutMs ?? ASSISTANT_TIMEOUT_MS,
+    );
     request.signal?.addEventListener('abort', () => controller.abort(), { once: true });
 
     try {

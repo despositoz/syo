@@ -61,8 +61,15 @@ export const WritingPage = ({ entryId, screen }: WritingPageProps) => {
    * flow, and the answer must not be shown behind the editor.
    */
   const candidate = draft?.assistantCandidate ?? null;
+  const shownCandidate = useRef<string | null>(null);
   useEffect(() => {
-    if (candidate && screen !== 'aiResult') openScreen('aiResult');
+    if (!candidate) return;
+    // Only a *new* candidate opens the screen. "Оставить свой вариант" keeps
+    // the candidate in the draft, and without this the flow would drag the
+    // user straight back to a decision they had already made.
+    if (shownCandidate.current === candidate.id) return;
+    shownCandidate.current = candidate.id;
+    if (screen !== 'aiResult') openScreen('aiResult');
   }, [candidate, screen, openScreen]);
 
   if (guard === 'redirecting' || !draft) return null;
@@ -439,15 +446,13 @@ const AssistantBar = ({
 }) => {
   const draft = useWritingStore((state) => state.draft);
   const error = useWritingStore((state) => state.assistantError);
+  const retry = useWritingStore((state) => state.assistantRetry);
   const setError = useWritingStore((state) => state.setAssistantError);
   const flush = useWritingStore((state) => state.flush);
 
-  const [lastOperation, setLastOperation] = useState<TextOperation | null>(null);
-
   const ask = useCallback(
-    async (operation: TextOperation) => {
+    async (operation: TextOperation, requestId?: string) => {
       if (!entry) return;
-      setLastOperation(operation);
       // What is on screen is written down before anything is sent: a request
       // must never be the reason a sentence was lost.
       await flush();
@@ -458,13 +463,23 @@ const AssistantBar = ({
           ? { start: element.selectionStart, end: element.selectionEnd }
           : undefined;
 
-      await runTextOperation({ entry, operation, ...(selection ? { selection } : {}) });
+      await runTextOperation({
+        entry,
+        operation,
+        ...(requestId ? { requestId } : {}),
+        ...(selection ? { selection } : {}),
+      });
     },
     [entry, flush, area],
   );
 
   if (!draft) return null;
   const disabled = !entry || !hasMeaningfulText(draft.workingText);
+  // Questions are retried from the conversation, not from here.
+  const retryOperation =
+    retry && retry.operation !== 'nextQuestion' && retry.operation !== 'replaceQuestion'
+      ? (retry.operation as TextOperation)
+      : null;
 
   return (
     <div className={styles.assistant}>
@@ -486,12 +501,13 @@ const AssistantBar = ({
       {error ? (
         <div className={styles.assistantError} role="alert" data-testid="writing-assistant-error">
           <span>{assistantErrorText(error)}</span>
-          {error.retriable && lastOperation ? (
+          {error.retriable && retryOperation ? (
             <button
               type="button"
               onClick={() => {
                 setError(null);
-                void ask(lastOperation);
+                // The same requestId: a retry is the same request, not a second.
+                void ask(retryOperation, retry!.requestId);
               }}
               data-testid="writing-assistant-retry"
             >

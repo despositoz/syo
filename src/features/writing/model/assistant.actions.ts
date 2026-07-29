@@ -66,12 +66,23 @@ const conversationContext = (draft: WritingDraft): AssistantRequest['conversatio
   };
 };
 
-let inFlight: AbortController | null = null;
+/*
+ * Two lanes, because a question and a text operation are different intents: a
+ * new question replaces the previous question, but composing a text must not
+ * cancel — or be cancelled by — a question that happens to be in the air.
+ */
+type Lane = 'question' | 'text';
+const inFlight: Record<Lane, AbortController | null> = { question: null, text: null };
+
+const laneOf = (operation: AssistantOperation): Lane =>
+  operation === 'nextQuestion' || operation === 'replaceQuestion' ? 'question' : 'text';
 
 /** Anything in the air is abandoned: its result would answer an old question. */
 export const cancelAssistant = (): void => {
-  inFlight?.abort();
-  inFlight = null;
+  inFlight.question?.abort();
+  inFlight.text?.abort();
+  inFlight.question = null;
+  inFlight.text = null;
   const store = useWritingStore.getState();
   store.setAssistantBusy(false);
   if (store.draft?.pendingAssistantRequest) {
@@ -98,16 +109,22 @@ const run = async (options: RunOptions) => {
   if (!draft) throw new AssistantError('invalidRequest');
 
   const { requestId } = options;
-  const snapshot = requestSnapshot(draft, options.operation, requestId);
+  const lane = laneOf(options.operation);
 
-  // Recorded before anything leaves the device: a response is only accepted
-  // against the request that is still open.
-  await store.apply((current) => beginAssistantRequest(current, snapshot)).catch(() => undefined);
+  /*
+   * Only a text operation is recorded in the draft. The marker is a single
+   * slot, and a question request writing into it would overwrite the marker of
+   * a text operation started a moment earlier — whose answer would then be
+   * dropped as stale. Questions carry their own id in the closure instead.
+   */
+  if (lane === 'text') {
+    const snapshot = requestSnapshot(draft, options.operation, requestId);
+    await store.apply((current) => beginAssistantRequest(current, snapshot)).catch(() => undefined);
+  }
   store.setAssistantBusy(true);
-
-  inFlight?.abort();
+  inFlight[lane]?.abort();
   const controller = new AbortController();
-  inFlight = controller;
+  inFlight[lane] = controller;
 
   try {
     return await assistantGateway().send({
@@ -121,7 +138,7 @@ const run = async (options: RunOptions) => {
       signal: controller.signal,
     });
   } finally {
-    if (inFlight === controller) inFlight = null;
+    if (inFlight[lane] === controller) inFlight[lane] = null;
     useWritingStore.getState().setAssistantBusy(false);
   }
 };
@@ -135,6 +152,9 @@ const run = async (options: RunOptions) => {
  * endless stream of them.
  */
 let askingQuestion = false;
+
+/** The question request whose answer is still wanted. */
+let latestQuestionRequestId: string | null = null;
 
 export const askNextQuestion = async (entry: DiaryEntry, replace = false): Promise<void> => {
   if (askingQuestion) return;
@@ -152,6 +172,7 @@ export const askNextQuestion = async (entry: DiaryEntry, replace = false): Promi
     .catch(() => undefined);
 
   const requestId = createId();
+  latestQuestionRequestId = requestId;
   try {
     const result = await run({
       entry,
@@ -160,14 +181,12 @@ export const askNextQuestion = async (entry: DiaryEntry, replace = false): Promi
     });
     if (result.kind !== 'question') throw new AssistantError('unknown');
 
-    await useWritingStore.getState().apply((draft) => {
-      // A question that answers a request nobody is waiting for is stale.
-      if (draft.pendingAssistantRequest?.requestId !== result.requestId) return draft;
-      return setQuestion(clearPendingRequest(draft), result.question);
-    });
+    // A question that answers a request nobody is waiting for is stale.
+    if (latestQuestionRequestId !== requestId) return;
+    await useWritingStore.getState().apply((draft) => setQuestion(draft, result.question));
     useWritingStore.getState().setAssistantError(null);
   } catch (error) {
-    await failed(error, requestId);
+    await failed(error, requestId, replace ? 'replaceQuestion' : 'nextQuestion');
   } finally {
     askingQuestion = false;
     useWritingStore.getState().setAssistantBusy(false);
@@ -235,7 +254,7 @@ export const runTextOperation = async (options: TextOperationOptions): Promise<v
     });
     useWritingStore.getState().setAssistantError(null);
   } catch (error) {
-    await failed(error, requestId);
+    await failed(error, requestId, options.operation);
   }
 };
 
@@ -251,10 +270,16 @@ export const composeFromConversation = (entry: DiaryEntry): Promise<void> =>
  * marker of the request the user is now waiting for — the fresh answer would
  * then be dropped as stale.
  */
-const failed = async (error: unknown, requestId: string): Promise<void> => {
+const failed = async (
+  error: unknown,
+  requestId: string,
+  operation: AssistantOperation,
+): Promise<void> => {
   const assistantError = error instanceof AssistantError ? error : new AssistantError('unknown');
 
   const store = useWritingStore.getState();
+  // Only its own marker, never someone else's: a request abandoned long ago
+  // must not clear the marker of the one the user is waiting for now.
   await store
     .apply((draft) =>
       draft.pendingAssistantRequest?.requestId === requestId ? clearPendingRequest(draft) : draft,
@@ -270,5 +295,8 @@ const failed = async (error: unknown, requestId: string): Promise<void> => {
       .catch(() => undefined);
   }
   // 'cancelled' is the user's own doing — never an error to explain.
-  store.setAssistantError(assistantError.code === 'cancelled' ? null : assistantError);
+  store.setAssistantError(assistantError.code === 'cancelled' ? null : assistantError, {
+    operation,
+    requestId,
+  });
 };

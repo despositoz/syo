@@ -11,7 +11,11 @@ const request = (overrides: Partial<AssistantRequest> = {}): AssistantRequest =>
 });
 
 const gateway = (fetchImpl: typeof fetch, initData = 'user=1&hash=abc') =>
-  new HttpAssistantGateway({ endpoint: 'https://syo.example/api/assistant', initData: () => initData, fetchImpl });
+  new HttpAssistantGateway({
+    endpoint: 'https://syo.example/api/assistant',
+    initData: () => initData,
+    fetchImpl,
+  });
 
 const jsonResponse = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers });
@@ -86,7 +90,10 @@ describe('talking to SYO’s own backend', () => {
         'Retry-After': '30',
       })) as unknown as typeof fetch);
 
-    await expect(sut.send(request())).rejects.toMatchObject({ code: 'rateLimited', retryAfter: 30 });
+    await expect(sut.send(request())).rejects.toMatchObject({
+      code: 'rateLimited',
+      retryAfter: 30,
+    });
   });
 
   it('turns a network failure into "offline", not into a crash', async () => {

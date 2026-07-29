@@ -522,7 +522,8 @@ WritingDraft` (`domain/writing/writing.types.ts`). Черновик текста
 в один лог. Мат и резкость сохраняются: это стиль, а не ошибка.
 
 Развёртывание бэкенда, переменные окружения и чек-лист — в
-[`server/README.md`](server/README.md).
+[`server/README.md`](server/README.md). Таблица приёмки этапа —
+[`P0_3_ACCEPTANCE.md`](P0_3_ACCEPTANCE.md).
 
 ### Текст в Дневнике
 

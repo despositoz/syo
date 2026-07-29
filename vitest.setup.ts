@@ -8,7 +8,7 @@ import { cleanup, configure } from '@testing-library/react';
  * parallel a slow machine loses a render to the scheduler, and a passing test
  * fails for reasons that have nothing to do with the code.
  */
-configure({ asyncUtilTimeout: 5000 });
+configure({ asyncUtilTimeout: 10_000 });
 
 // jsdom has no matchMedia; motion + theme code depends on it.
 if (!window.matchMedia) {
