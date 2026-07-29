@@ -270,13 +270,13 @@ export const FilmPage = ({ filmId, initialTitle }: FilmPageProps) => {
           <TopShade />
 
           <div className={styles.heroContent}>
-            <div className={styles.posterHolder}>
+            <div className={styles.posterHolder} data-poster-frame="">
               <Poster
                 title={view.title}
                 year={view.year}
                 posterPath={view.posterPath}
                 accent={view.accent}
-                width={POSTER_WIDTH}
+                requestWidth={POSTER_WIDTH}
                 priority
                 decorative
               />

@@ -74,7 +74,8 @@ const parseTurn = (value: unknown): ConversationTurn | null => {
     questionText,
     topic: asString(source.topic),
     leadIn: asString(source.leadIn),
-    answerText: typeof source.answerText === 'string' ? clampText(source.answerText, ANSWER_LIMIT) : null,
+    answerText:
+      typeof source.answerText === 'string' ? clampText(source.answerText, ANSWER_LIMIT) : null,
     status: status === 'skipped' || status === 'replaced' ? status : 'answered',
     createdAt: asString(source.createdAt) ?? new Date().toISOString(),
     answeredAt: asString(source.answeredAt),

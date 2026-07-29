@@ -34,13 +34,14 @@ export const DiaryEntryCard = ({
     aria-label={`${entry.filmTitle}. Твоя оценка ${entry.overallRating} из 5`}
     data-testid={`diary-card-${entry.id}`}
   >
-    <span className={styles.poster}>
+    {/* The frame owns the size; the poster fills it (P0.3.1 §5.1). */}
+    <span className={styles.poster} data-poster-frame="">
       <Poster
         title={entry.filmTitle}
         year={entry.releaseYear ?? ''}
         posterPath={entry.posterPath ?? ''}
         accent={{ hex: '#6f2a35', rgb: '111, 42, 53' }}
-        width={view === 'grid' ? 160 : 64}
+        requestWidth={view === 'grid' ? 160 : 64}
         decorative
       />
     </span>
@@ -53,22 +54,34 @@ export const DiaryEntryCard = ({
         <RatingSummary overallRating={entry.overallRating} size="small" />
         {/* The precise number only earns its place when it differs. */}
         {entry.preciseRating !== entry.overallRating ? (
-          <span className={styles.precise}>{formatPrecise(entry.preciseRating)}</span>
+          <span className={styles.precise} data-testid="card-precise">
+            {formatPrecise(entry.preciseRating)}
+          </span>
+        ) : null}
+        {/* In the grid the text is announced, not quoted (P0.3.1 §6.4). */}
+        {entry.hasText && view === 'grid' ? (
+          <span
+            className={styles.textMarker}
+            role="img"
+            aria-label={entry.text?.spoiler ? 'Есть текст со спойлерами' : 'Есть текст'}
+            data-testid="card-text-marker"
+          />
         ) : null}
       </span>
 
       {/*
-        A real excerpt of what the user wrote — never a generated summary. A
+        A real excerpt of what the user wrote — never a generated summary, and
+        only in the list: a grid cell has no room to read in (P0.3.1 §6.4). A
         spoiler text shows only that it exists (spec §23.2).
       */}
-      {entry.hasText && entry.text ? (
+      {entry.hasText && entry.text && view === 'list' ? (
         entry.text.spoiler ? (
           <span className={styles.excerpt} data-spoiler="true" data-testid="card-excerpt">
             Есть текст со спойлерами
           </span>
         ) : (
           <span className={styles.excerpt} data-testid="card-excerpt">
-            {textExcerpt(entry.text, view === 'grid' ? 90 : 140)}
+            {textExcerpt(entry.text, 140)}
           </span>
         )
       ) : null}

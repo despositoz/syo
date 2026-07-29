@@ -4,6 +4,17 @@
   flex: 1;
   gap: var(--space-5);
   padding-top: var(--space-2);
+  /* Readable measure on a desktop window instead of a full-width paragraph. */
+  width: min(100%, var(--content-max-reading));
+  margin-inline: auto;
+}
+
+/* The film this text is about, said quietly and without a second poster. */
+.context {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  text-wrap: balance;
 }
 
 .question {
@@ -96,7 +107,11 @@
 .textarea {
   flex: 1;
   width: 100%;
-  min-height: 40vh;
+  /*
+   * A page-sized sheet that still leaves the operations and the CTA reachable
+   * on a short phone, and does not collapse on a tall one (P0.3.1 §14.2).
+   */
+  min-height: clamp(240px, 40dvh, 520px);
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-hairline);
@@ -104,6 +119,7 @@
   color: var(--color-text);
   font-family: inherit;
   font-size: 1.0625rem;
+  field-sizing: content;
   line-height: 1.55;
   resize: none;
   /* The caret stays visible when the keyboard covers the bottom. */
@@ -166,16 +182,31 @@
   gap: var(--space-2);
 }
 
+/*
+ * Grid, not flex: equal tracks that may actually shrink. Three flex children
+ * with padding overflowed a 320px window by half a pixel and clipped the last
+ * label (P0.3.1 §8). At large text sizes the row wraps instead of overflowing.
+ */
+/*
+ * Three across when they fit, 2+1 or one per row when they do not. Flex
+ * rather than a grid track: `min-width: min-content` lets a button refuse to
+ * become narrower than its own word, which is what keeps a 200% label inside
+ * its button instead of spilling out of it (P0.3.1 §8).
+ */
 .assistantRow {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
 /* Quiet by design: help is offered, never pushed (spec §15.1). */
 .assistantButton {
-  flex: 1;
+  flex: 1 1 96px;
+  /* Never narrower than the word it carries. */
+  min-width: min-content;
   min-height: var(--touch-min);
-  padding: 0 var(--space-3);
+  padding-inline: var(--space-3);
+  white-space: nowrap;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-hairline);
   background: var(--color-surface);

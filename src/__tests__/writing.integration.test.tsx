@@ -417,18 +417,6 @@ describe('SYO helps with the text', () => {
     await user.click(await screen.findByTestId('writing-answer-send'));
 
     await user.click(await screen.findByTestId('writing-compose'));
-    await new Promise((r) => setTimeout(r, 300));
-    // eslint-disable-next-line no-console
-    console.log(
-      'DBG2',
-      JSON.stringify({
-        cand: useWritingStore.getState().draft?.assistantCandidate?.text ?? null,
-        pending: useWritingStore.getState().draft?.pendingAssistantRequest,
-        err: useWritingStore.getState().assistantError?.code ?? null,
-        screenNow: useWritingStore.getState().draft?.currentScreen,
-        seen: asked,
-      }),
-    );
     expect(await screen.findByTestId('writing-candidate')).toHaveTextContent(
       'Собранный из ответов текст',
     );

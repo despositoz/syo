@@ -46,7 +46,19 @@
   padding: var(--space-2) var(--space-1);
   border-radius: var(--radius-lg);
   color: var(--color-text-tertiary);
-  transition: color var(--duration-fast) var(--ease-standard);
+  /*
+   * Transform is part of the transition, so the press compresses and releases
+   * instead of snapping back. Compression is quick, release a touch slower —
+   * that is what a physical button feels like.
+   */
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    transform 160ms var(--ease-standard);
+}
+
+.tab:active,
+.rate:active {
+  transition-duration: var(--duration-fast), 100ms;
 }
 
 .tab[data-active='true'] {
@@ -80,7 +92,8 @@
 
 .label {
   position: relative;
-  font-size: 0.6875rem;
+  /* 12px is the floor for a label that has to be read at a glance. */
+  font-size: 0.75rem;
   line-height: 1.1;
   letter-spacing: 0.01em;
   /* Labels are always visible — never icon-only. */
@@ -112,11 +125,24 @@
   transform: scale(0.97);
 }
 
+/* A wide window keeps the bar a bar, not a stretched ribbon. */
+.bar {
+  max-width: 640px;
+  margin-inline: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bar,
   .indicator,
   .tab,
   .rate {
     transition: none;
+  }
+
+  /* No spatial press: brightness carries the feedback instead. */
+  .tab:active,
+  .rate:active {
+    transform: none;
+    filter: brightness(1.25);
   }
 }

@@ -1,5 +1,9 @@
 .card {
   display: flex;
+  /* Never wider than its track, and always allowed to shrink inside it. */
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   text-align: left;
   border-radius: var(--radius-md);
   transition: transform var(--duration-fast) var(--ease-standard);
@@ -18,6 +22,7 @@
 
 .poster {
   display: block;
+  min-width: 0;
   border-radius: var(--radius-sm);
   overflow: hidden;
   /* Stable box: the grid never reflows while posters load. */
@@ -29,7 +34,7 @@
 }
 
 .card[data-view='list'] .poster {
-  flex: 0 0 auto;
+  flex: 0 0 56px;
   width: 56px;
 }
 
@@ -44,6 +49,7 @@
 .title {
   font-size: 0.875rem;
   line-height: 1.25;
+  overflow-wrap: anywhere;
   color: var(--color-text);
   /* Two lines in the grid; the full title stays in the accessible name. */
   display: -webkit-box;
@@ -61,13 +67,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.precise {
-  width: 4px;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background: var(--color-text-tertiary);
 }
 
 .card:active {
@@ -119,14 +118,24 @@
   display: none;
 }
 
+/*
+ * The precise score is text, not an ornament. It used to share its class with
+ * a 4×4px dot, so "4,6" was rendered inside four pixels (P0.3.1 §7).
+ */
 .precise {
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   color: var(--color-text-tertiary);
 }
 
-/* Two or three lines at most: the card is a hint, not the entry. */
+/*
+ * Two or three lines at most: the card is a hint, not the entry. An unbroken
+ * string — a URL, a keysmash — breaks mid-word rather than running out of the
+ * card: line-clamp alone does not stop horizontal overflow.
+ */
 .excerpt {
+  overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
@@ -142,7 +151,23 @@
   font-style: italic;
 }
 
+/*
+ * A grid cell is roughly 110px wide: two lines of prose under each poster
+ * turn the grid into a wall of ragged text. In the grid the fact that a text
+ * exists is shown by a marker; the words themselves live in the list.
+ */
 .card[data-view='grid'] .excerpt {
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  display: none;
+}
+
+.textMarker {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-text-tertiary);
+}
+
+.card[data-view='list'] .textMarker {
+  display: none;
 }

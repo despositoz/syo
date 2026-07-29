@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, type ReactNode } from 'react';
 import { useNavigationStore } from './navigation/navigationStore';
 import { routeKey, type Route, type RootTab } from './navigation/navigationTypes';
 import { useNavigationController } from './appServices';
@@ -17,7 +17,15 @@ import { RatingModePage } from '@features/rating/screens/RatingModePage';
 import { QuickRatingPage } from '@features/rating/screens/QuickRatingPage';
 import { DeepRatingPage } from '@features/rating/screens/DeepRatingPage';
 import { RatingResultPage } from '@features/rating/screens/RatingResultPage';
-import { WritingPage } from '@features/writing/screens/WritingPage';
+/*
+ * The writing flow is the largest feature and the one a session is least
+ * likely to reach: it loads when a text is actually started, not on boot.
+ */
+const WritingPage = lazy(() =>
+  import('@features/writing/screens/WritingPage').then((module) => ({
+    default: module.WritingPage,
+  })),
+);
 import styles from './AppShell.module.css';
 
 const RootScreen = ({ tab }: { tab: RootTab }) => {
@@ -46,7 +54,13 @@ const OverlayScreen = ({ route }: { route: Route }) => {
     case 'rateResult':
       return <RatingResultPage filmId={route.filmId} />;
     case 'write':
-      return <WritingPage entryId={route.entryId} screen={route.screen} />;
+      return (
+        // No spinner: the chunk arrives in a frame or two, and a flash of
+        // "loading" would be more noticeable than the wait itself.
+        <Suspense fallback={null}>
+          <WritingPage entryId={route.entryId} screen={route.screen} />
+        </Suspense>
+      );
     case 'diaryEntry':
       return <DiaryEntryPage entryId={route.entryId} />;
     case 'root':

@@ -1,6 +1,14 @@
 .poster {
   position: relative;
   overflow: hidden;
+  /*
+   * Fills whatever frame the parent provides. The poster knows its ratio and
+   * nothing else about layout: sizing is the frame's business (P0.3.1 §4.2).
+   */
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  aspect-ratio: 2 / 3;
   border-radius: var(--radius-md);
   /* Stage 1 — dominant colour. Present before any pixel arrives. */
   background:
@@ -11,7 +19,6 @@
     ),
     var(--color-bg-raised);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42);
-  flex: none;
 }
 
 .preview,
@@ -21,6 +28,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: 50% 50%;
 }
 
 .preview {

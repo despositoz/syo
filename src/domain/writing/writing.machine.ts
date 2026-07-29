@@ -171,10 +171,7 @@ export const isCandidateFresh = (draft: WritingDraft, candidate: AssistantCandid
   return pending.baseRevisionId === candidate.baseRevisionId;
 };
 
-export const storeCandidate = (
-  draft: WritingDraft,
-  candidate: AssistantCandidate,
-): WritingDraft =>
+export const storeCandidate = (draft: WritingDraft, candidate: AssistantCandidate): WritingDraft =>
   advance(draft, {
     assistantCandidate: candidate,
     pendingAssistantRequest: null,
@@ -241,10 +238,7 @@ export const startConversation = (draft: WritingDraft): WritingDraft =>
     currentScreen: 'conversation',
   });
 
-const withConversation = (
-  draft: WritingDraft,
-  patch: Partial<ConversationState>,
-): WritingDraft => {
+const withConversation = (draft: WritingDraft, patch: Partial<ConversationState>): WritingDraft => {
   if (!draft.conversation) return draft;
   return advance(draft, { conversation: { ...draft.conversation, ...patch } });
 };

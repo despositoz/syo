@@ -59,6 +59,8 @@ export const StarRating = ({
   const [dragging, setDragging] = useState(false);
 
   const pointerId = useRef<number | null>(null);
+  /** Which star has focus, so Space and Enter know what to select. */
+  const focusedStar = useRef<RatingValue | null>(null);
   const frame = useRef<number | null>(null);
   const pendingX = useRef<number | null>(null);
   const lastValue = useRef<RatingValue | null>(value);
@@ -126,6 +128,17 @@ export const StarRating = ({
     startPoint.current = { x: event.clientX, y: event.clientY };
     axis.current = event.pointerType === 'mouse' ? 'horizontal' : 'undecided';
     setDragging(true);
+
+    /*
+     * A mouse gesture is horizontal from the first pixel, so capture it at
+     * once: without capture a drag that leaves the control stops updating and
+     * the button-up never arrives — the control stays stuck mid-drag. Touch
+     * captures only once the axis is decided, so a vertical scroll is still
+     * the page's to keep.
+     */
+    if (event.pointerType === 'mouse') {
+      trackRef.current?.setPointerCapture?.(event.pointerId);
+    }
 
     // Touching the control cancels whatever the parent had pending, such as an
     // auto-advance timer — the screen must not move out from under the finger.
@@ -211,6 +224,11 @@ export const StarRating = ({
         return commit(1);
       case 'End':
         return commit(5);
+      // The standard radio keys: they select what is focused (P0.3.1 §11.1).
+      case ' ':
+      case 'Spacebar':
+      case 'Enter':
+        return commit(current ?? focusedStar.current ?? 1);
       default: {
         const digit = Number(event.key);
         if (Number.isInteger(digit) && digit >= 1 && digit <= 5) commit(digit as RatingValue);
@@ -238,6 +256,9 @@ export const StarRating = ({
       onPointerMove={onPointerMove}
       onPointerUp={(event) => endDrag(event, false)}
       onPointerCancel={(event) => endDrag(event, true)}
+      // Capture lost to the browser (a system gesture, another element): the
+      // control must not stay in a dragging state nobody can end.
+      onLostPointerCapture={(event) => endDrag(event, true)}
       onKeyDown={onKeyDown}
       data-testid="star-rating"
     >
@@ -254,6 +275,9 @@ export const StarRating = ({
             tabIndex={disabled ? -1 : checked || (shown === null && star === 1) ? 0 : -1}
             data-filled={shown !== null && shown >= star ? true : undefined}
             data-current={checked || undefined}
+            onFocus={() => {
+              focusedStar.current = star;
+            }}
             ref={(node) => {
               starRefs.current[star - 1] = node;
             }}

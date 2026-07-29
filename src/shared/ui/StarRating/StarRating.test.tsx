@@ -206,3 +206,88 @@ describe('star geometry', () => {
     expect(stepValue(5, 1)).toBe(5);
   });
 });
+
+describe('StarRating keyboard, the standard radio keys', () => {
+  it('Space selects the focused star', async () => {
+    const user = userEvent.setup();
+    const { onCommit, focusable } = setup();
+
+    focusable().focus();
+    // From nothing: the first arrow lands on 1, the second on 2.
+    await user.keyboard('{ArrowRight}{ArrowRight}');
+    onCommit.mockClear();
+    await user.keyboard(' ');
+
+    // Space confirms what is focused rather than doing nothing at all.
+    expect(onCommit).toHaveBeenCalledWith(2, 'keyboard');
+  });
+
+  it('Enter selects the focused star', async () => {
+    const user = userEvent.setup();
+    const { onCommit, focusable } = setup({ value: 4 });
+
+    focusable().focus();
+    onCommit.mockClear();
+    await user.keyboard('{Enter}');
+
+    expect(onCommit).toHaveBeenCalledWith(4, 'keyboard');
+  });
+
+  it('Space on an untouched control chooses the star that has focus', async () => {
+    const user = userEvent.setup();
+    const { onCommit } = setup();
+
+    // Nothing rated yet: focus sits on the first star.
+    screen.getAllByRole('radio')[0]!.focus();
+    await user.keyboard(' ');
+
+    expect(onCommit).toHaveBeenCalledWith(1, 'keyboard');
+  });
+});
+
+describe('StarRating pointer hardening', () => {
+  it('captures the mouse on press, so a drag outside the control keeps working', () => {
+    stubGeometry();
+    setup();
+    const group = screen.getByRole('radiogroup');
+    const capture = vi.fn();
+    Object.defineProperty(group, 'setPointerCapture', { value: capture, configurable: true });
+
+    const event = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 80 });
+    Object.defineProperty(event, 'pointerId', { value: 7 });
+    Object.defineProperty(event, 'pointerType', { value: 'mouse' });
+    act(() => {
+      group.dispatchEvent(event);
+    });
+
+    expect(capture).toHaveBeenCalledWith(7);
+  });
+
+  it('losing the capture ends the drag and keeps the confirmed value', () => {
+    stubGeometry();
+    const { onCommit, group } = setup({ value: 2 });
+
+    fire(group, 'pointerdown', 80);
+    fire(group, 'pointermove', 260);
+    onCommit.mockClear();
+    fire(group, 'lostpointercapture', 260);
+
+    // A gesture the browser took away decides nothing.
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('radio', { name: '2 из 5' })).toHaveAttribute('aria-checked', 'true');
+    expect(group).not.toHaveAttribute('data-dragging');
+  });
+
+  it('a cancelled gesture restores the confirmed value', () => {
+    stubGeometry();
+    const { onCommit, group } = setup({ value: 3 });
+
+    fire(group, 'pointerdown', 80);
+    fire(group, 'pointermove', 300);
+    onCommit.mockClear();
+    fire(group, 'pointercancel', 300);
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('radio', { name: '3 из 5' })).toHaveAttribute('aria-checked', 'true');
+  });
+});

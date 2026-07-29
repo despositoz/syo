@@ -8,8 +8,12 @@ export interface PosterProps {
   year?: string;
   posterPath?: string;
   accent?: AccentColor;
-  /** CSS width; height follows the fixed 2:3 ratio, so layout never shifts. */
-  width: number;
+  /**
+   * Which TMDB size to fetch and what intrinsic dimensions the <img> declares.
+   * It is a *hint about pixels*, never a layout instruction: the poster always
+   * fills the frame its parent gives it (P0.3.1 §4).
+   */
+  requestWidth: number;
   /** Above-the-fold posters skip lazy loading. */
   priority?: boolean;
   className?: string;
@@ -29,7 +33,7 @@ export const Poster = ({
   year,
   posterPath,
   accent = DEFAULT_ACCENT,
-  width,
+  requestWidth,
   priority = false,
   className,
   decorative = false,
@@ -42,8 +46,8 @@ export const Poster = ({
     [posterPath],
   );
   const fullUrl = useMemo(
-    () => (posterPath ? imagePipeline.poster(posterPath, width) : ''),
-    [posterPath, width],
+    () => (posterPath ? imagePipeline.poster(posterPath, requestWidth) : ''),
+    [posterPath, requestWidth],
   );
 
   useEffect(() => {
@@ -62,18 +66,24 @@ export const Poster = ({
     setStage(imagePipeline.isDecoded(fullUrl) ? 'full' : 'color');
   }, [posterPath, fullUrl]);
 
-  const height = Math.round((width * 3) / 2);
+  // Intrinsic attributes only: they give the browser the ratio before the
+  // bytes arrive. CSS never reads them.
+  const height = Math.round((requestWidth * 3) / 2);
 
   return (
     <div
       className={[styles.poster, className].filter(Boolean).join(' ')}
+      /*
+       * No width here, ever. The frame around this element owns the geometry;
+       * a fixed inline width was what pushed diary posters out of their grid
+       * tracks and on top of each other (P0.3.1 §1).
+       */
       style={{
-        width: `${width}px`,
-        aspectRatio: '2 / 3',
         ['--poster-accent' as string]: accent.hex,
         ['--poster-accent-rgb' as string]: accent.rgb,
       }}
       data-stage={stage}
+      data-poster-root=""
     >
       {previewUrl && stage !== 'fallback' ? (
         <img
@@ -81,7 +91,7 @@ export const Poster = ({
           src={previewUrl}
           alt=""
           aria-hidden="true"
-          width={width}
+          width={requestWidth}
           height={height}
           decoding="async"
           loading={priority ? 'eager' : 'lazy'}
@@ -100,7 +110,7 @@ export const Poster = ({
           src={fullUrl}
           alt={decorative ? '' : `Постер фильма «${title}»`}
           aria-hidden={decorative || undefined}
-          width={width}
+          width={requestWidth}
           height={height}
           decoding="async"
           fetchPriority={priority ? 'high' : 'auto'}

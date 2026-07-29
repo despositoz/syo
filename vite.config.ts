@@ -32,6 +32,18 @@ export default defineConfig({
     port: 5173,
   },
   build: {
+    rollupOptions: {
+      output: {
+        /*
+         * The framework runtime changes far less often than the app does, so
+         * it gets its own chunk: a release then invalidates ~90KB of app code
+         * instead of the whole bundle.
+         */
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'dexie', 'zustand', '@tanstack/react-query'],
+        },
+      },
+    },
     target: 'es2020',
     cssTarget: 'safari15',
     // Maps help while debugging locally; the published bundle ships without

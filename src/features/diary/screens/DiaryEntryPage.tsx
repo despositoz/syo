@@ -272,12 +272,7 @@ export const DiaryEntryPage = ({ entryId }: DiaryEntryPageProps) => {
             )}
           </div>
         ) : (
-          <Button
-            variant="secondary"
-            block
-            onClick={() => void write()}
-            data-testid="entry-write"
-          >
+          <Button variant="secondary" block onClick={() => void write()} data-testid="entry-write">
             Написать о фильме
           </Button>
         )}

@@ -17,7 +17,12 @@
 }
 
 .poster {
+  /* Explicit frame: the poster no longer carries its own width. */
+  flex: 0 0 84px;
+  width: 84px;
+  aspect-ratio: 2 / 3;
   border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
 .body {

@@ -85,7 +85,13 @@ export const RatingResultPage = ({ filmId }: RatingResultPageProps) => {
               void toggleWatchlist(summary as never).catch(() => undefined);
             },
           });
-        } else {
+        } else if (!thenWrite) {
+          /*
+           * Only when saving is the whole action. Going straight on to write
+           * carries its own confirmation — the entry and the editor are right
+           * there — and the bar would follow the user onto the next screen and
+           * sit over its controls (P0.3.1 §9.1).
+           */
           showSnackbar('Оценка сохранена');
         }
 

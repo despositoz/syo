@@ -20,7 +20,9 @@
 
 .poster {
   flex: 0 0 auto;
+  /* 40px of frame, and the poster inside is exactly 40px — never 56 clipped. */
   width: 40px;
+  aspect-ratio: 2 / 3;
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -48,6 +50,16 @@
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-tertiary);
+}
+
+/*
+ * On a narrow phone the word gives way rather than squeezing the title out;
+ * the whole card is the button, so nothing becomes unreachable.
+ */
+@media (max-width: 340px) {
+  .action {
+    display: none;
+  }
 }
 
 .action {

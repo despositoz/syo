@@ -108,11 +108,15 @@ const toContext = (body: RequestBody): PromptContext | null => {
     : [];
 
   return {
-    film: { title: title.slice(0, 200), year: typeof body.film?.year === 'string' ? body.film.year : null },
+    film: {
+      title: title.slice(0, 200),
+      year: typeof body.film?.year === 'string' ? body.film.year : null,
+    },
     rating: {
       mode: rating.mode === 'deep' ? 'deep' : 'quick',
       overallRating: rating.overallRating,
-      preciseRating: typeof rating.preciseRating === 'number' ? rating.preciseRating : rating.overallRating,
+      preciseRating:
+        typeof rating.preciseRating === 'number' ? rating.preciseRating : rating.overallRating,
       ...(rating.aspects && typeof rating.aspects === 'object'
         ? { aspects: rating.aspects as Record<string, number | null> }
         : {}),

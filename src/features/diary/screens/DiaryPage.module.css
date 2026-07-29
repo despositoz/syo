@@ -16,13 +16,28 @@
     calc(var(--content-safe-right) + var(--space-4))
     /* Clear of the floating bottom bar and the home indicator. */ calc(var(--safe-bottom) + 132px)
     calc(var(--content-safe-left) + var(--space-4));
+  /* A personal diary is not a billboard: it stops growing (P0.3.1 §6.3). */
+  width: min(100%, var(--content-max-diary));
+  margin-inline: auto;
 }
 
+/*
+ * Title and count read as one thing, with the toggle pushed to the end. Three
+ * equal children left the count floating in the middle of the row.
+ */
 .header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
 .title {
@@ -38,75 +53,6 @@
   padding: 3px;
   border-radius: var(--radius-pill);
   background: var(--color-surface);
-}
-
-.viewButton {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-pill);
-  color: var(--color-text-tertiary);
-  transition: background-color var(--duration-fast) var(--ease-standard);
-}
-
-.viewButton[aria-pressed='true'] {
-  background: var(--color-surface-strong);
-  color: var(--color-text);
-}
-
-.viewButton svg {
-  width: 18px;
-  height: 18px;
-}
-
-.sectionTitle {
-  margin-bottom: var(--space-3);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-}
-
-.items[data-view='grid'] {
-  display: grid;
-  /* Three columns on a normal phone, two when the text is scaled up. */
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: var(--space-3);
-}
-
-.items[data-view='list'] {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.watchlist {
-  display: flex;
-  gap: var(--space-3);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.watchlist::-webkit-scrollbar {
-  display: none;
-}
-
-.watchlistItem {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  width: 84px;
-  text-align: left;
-}
-
-.watchlistTitle {
-  font-size: 0.8125rem;
-  line-height: 1.25;
-  color: var(--color-text-secondary);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .empty {
@@ -137,8 +83,13 @@
 }
 
 /*
- * Grid is the default: the poster is the object worth recognising. Three
- * columns on a normal phone, two when the text is scaled up.
+ * Grid is the default: the poster is the object worth recognising.
+ *
+ * The number of columns follows the *available* width rather than a window
+ * breakpoint — the content box is what a card actually has to fit into, and it
+ * differs between fullscreen Telegram, a browser tab and a desktop window.
+ * `min(100%, 100px)` keeps a single card from being forced below the track on
+ * a 280px window.
  */
 .list {
   display: grid;
@@ -146,15 +97,14 @@
 }
 
 .list[data-view='grid'] {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 100px), 1fr));
 }
 
 .list[data-view='list'] {
   grid-template-columns: 1fr;
 }
 
-@media (max-width: 340px) {
-  .list[data-view='grid'] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+/* Every link in the chain may shrink: one rigid child pushes the rest out. */
+.list > li {
+  min-width: 0;
 }

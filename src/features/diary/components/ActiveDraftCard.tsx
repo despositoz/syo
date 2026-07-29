@@ -29,13 +29,13 @@ export const ActiveDraftCard = ({ draft, onContinue, onDelete }: ActiveDraftCard
         onClick={onContinue}
         data-testid="draft-continue"
       >
-        <span className={styles.poster}>
+        <span className={styles.poster} data-poster-frame="">
           <Poster
             title={film.filmTitle}
             year={film.releaseYear ?? ''}
             posterPath={film.posterPath ?? ''}
             accent={{ hex: '#6f2a35', rgb: film.dominantColor ?? '111, 42, 53' }}
-            width={56}
+            requestWidth={56}
             decorative
           />
         </span>

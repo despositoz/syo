@@ -41,10 +41,17 @@ const mockAssistant = async (
 
     const answer = reply(body);
     if ('status' in answer && typeof answer.status === 'number') {
-      await route.fulfill({ status: answer.status, body: JSON.stringify({ error: { code: 'providerUnavailable' } }) });
+      await route.fulfill({
+        status: answer.status,
+        body: JSON.stringify({ error: { code: 'providerUnavailable' } }),
+      });
       return;
     }
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer) });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(answer),
+    });
   });
   return seen;
 };
@@ -60,7 +67,9 @@ test.describe('Writing a text', () => {
     await openWriting(page);
 
     await page.getByTestId('writing-mode-free').click();
-    await page.getByTestId('writing-textarea').fill('Фильм оставил тишину, которую не хочется нарушать.');
+    await page
+      .getByTestId('writing-textarea')
+      .fill('Фильм оставил тишину, которую не хочется нарушать.');
 
     await page.getByTestId('writing-to-preview').click();
     await expect(page.getByTestId('writing-preview-text')).toContainText('тишину');
@@ -165,7 +174,9 @@ test.describe('Writing a text', () => {
 
     await expect(page.getByTestId('writing-assistant-error')).toBeVisible();
     await expect(page.getByTestId('writing-assistant-retry')).toBeVisible();
-    await expect(page.getByTestId('writing-textarea')).toHaveValue('Текст, который нельзя потерять');
+    await expect(page.getByTestId('writing-textarea')).toHaveValue(
+      'Текст, который нельзя потерять',
+    );
   });
 
   test('a conversation builds the text out of the answers', async ({ page }) => {
@@ -177,7 +188,11 @@ test.describe('Writing a text', () => {
         return {
           requestId: body.requestId,
           promptVersion: 'question-1',
-          question: { questionId: `q${asked}`, question: `Что зацепило? ${asked}`, suggestFinish: asked >= 2 },
+          question: {
+            questionId: `q${asked}`,
+            question: `Что зацепило? ${asked}`,
+            suggestFinish: asked >= 2,
+          },
         };
       }
       return {
@@ -214,8 +229,8 @@ test.describe('Writing a text', () => {
       if (testId === 'writing-to-preview') break;
       await page.keyboard.press('Tab');
     }
-    expect(
-      await page.evaluate(() => document.activeElement?.getAttribute('data-testid')),
-    ).toBe('writing-to-preview');
+    expect(await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))).toBe(
+      'writing-to-preview',
+    );
   });
 });

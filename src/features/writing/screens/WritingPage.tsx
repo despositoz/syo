@@ -54,6 +54,7 @@ export const WritingPage = ({ entryId, screen }: WritingPageProps) => {
   const { draft, openScreen, leave } = useWritingFlow(entryId, screen);
   const entry = useDiaryEntry(entryId);
   const busy = useWritingStore((state) => state.assistantBusy);
+  const [exitOpen, setExitOpen] = useState(false);
 
   /*
    * A candidate arriving is what opens the result screen — not the tap that
@@ -89,7 +90,20 @@ export const WritingPage = ({ entryId, screen }: WritingPageProps) => {
     pending.operation !== 'replaceQuestion';
 
   return (
-    <RatingFlowShell onBack={() => leave()} accentRgb={accentRgb}>
+    <RatingFlowShell
+      onBack={() => leave()}
+      accentRgb={accentRgb}
+      /*
+       * The editor's way forward lives in the sticky footer: the textarea is
+       * page-sized, and a CTA at the end of the content would sit below the
+       * fold on a short phone (P0.3.1 §14.2).
+       */
+      footer={
+        !showProcessing && screen === 'editor' ? (
+          <EditorFooter onPreview={() => openScreen('preview')} onExit={() => setExitOpen(true)} />
+        ) : undefined
+      }
+    >
       {showProcessing ? (
         <ProcessingScreen operation={pending?.operation ?? ''} />
       ) : (
@@ -99,7 +113,8 @@ export const WritingPage = ({ entryId, screen }: WritingPageProps) => {
             <EditorScreen
               entryId={entryId}
               entry={entry}
-              onPreview={() => openScreen('preview')}
+              exitOpen={exitOpen}
+              onCloseExit={() => setExitOpen(false)}
               onLeave={leave}
             />
           ) : null}
@@ -193,12 +208,14 @@ const ModeScreen = ({
 const EditorScreen = ({
   entryId,
   entry,
-  onPreview,
+  exitOpen,
+  onCloseExit,
   onLeave,
 }: {
   entryId: string;
   entry: DiaryEntry | null;
-  onPreview: () => void;
+  exitOpen: boolean;
+  onCloseExit: () => void;
   onLeave: () => void;
 }) => {
   const draft = useWritingStore((state) => state.draft);
@@ -209,7 +226,6 @@ const EditorScreen = ({
   const discard = useWritingStore((state) => state.discard);
 
   const areaRef = useRef<HTMLTextAreaElement>(null);
-  const [exitOpen, setExitOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
 
   // Recovery comfort: coming back puts the caret where it was, not at the top.
@@ -246,6 +262,11 @@ const EditorScreen = ({
 
   return (
     <div className={styles.content} data-testid="writing-editor" data-entry={entryId}>
+      {/* Which film this is about, without taking room from the editor. */}
+      <p className={styles.context} data-testid="writing-context">
+        Текст о «{draft.film.filmTitle}»
+      </p>
+
       <div className={styles.editor}>
         <textarea
           ref={areaRef}
@@ -295,34 +316,17 @@ const EditorScreen = ({
         </Button>
       ) : null}
 
-      <Button
-        variant="primary"
-        block
-        disabled={!hasMeaningfulText(draft.workingText)}
-        onClick={() => {
-          void flush();
-          onPreview();
-        }}
-        data-testid="writing-to-preview"
-      >
-        Дальше
-      </Button>
-
-      <Button variant="ghost" block onClick={() => setExitOpen(true)} data-testid="writing-exit">
-        Выйти
-      </Button>
-
       <VersionsSheet open={versionsOpen} onClose={() => setVersionsOpen(false)} />
 
       <ExitDraftSheet
         open={exitOpen}
-        onClose={() => setExitOpen(false)}
+        onClose={onCloseExit}
         onLeave={() => {
-          setExitOpen(false);
+          onCloseExit();
           onLeave();
         }}
         onDiscard={async () => {
-          setExitOpen(false);
+          onCloseExit();
           await discard().catch(() => undefined);
           onLeave();
         }}
@@ -425,11 +429,40 @@ const PreviewScreen = ({ entryId, onBack }: { entryId: string; onBack: () => voi
   );
 };
 
+/** The editor's sticky actions: always on screen, never scrolled away. */
+const EditorFooter = ({ onPreview, onExit }: { onPreview: () => void; onExit: () => void }) => {
+  const draft = useWritingStore((state) => state.draft);
+  const flush = useWritingStore((state) => state.flush);
+  if (!draft) return null;
+
+  return (
+    <>
+      <Button
+        variant="primary"
+        block
+        disabled={!hasMeaningfulText(draft.workingText)}
+        onClick={() => {
+          void flush();
+          onPreview();
+        }}
+        data-testid="writing-to-preview"
+      >
+        Дальше
+      </Button>
+
+      <Button variant="ghost" block onClick={onExit} data-testid="writing-exit">
+        Выйти
+      </Button>
+    </>
+  );
+};
+
 /* --- SYO operations on an existing text --------------------------------- */
 
+/** Plain verbs: what will happen to the text, in one word each. */
 const OPERATIONS: { id: TextOperation; label: string }[] = [
-  { id: 'correct', label: 'Проверить' },
-  { id: 'shorten', label: 'Сократить' },
+  { id: 'correct', label: 'Исправить' },
+  { id: 'shorten', label: 'Короче' },
   { id: 'connect', label: 'Связать' },
 ];
 
@@ -687,7 +720,6 @@ const AiResultScreen = ({ onEditor }: { onEditor: () => void }) => {
   const draft = useWritingStore((state) => state.draft);
   const apply = useWritingStore((state) => state.apply);
   const [showOriginal, setShowOriginal] = useState(false);
-
   const candidate = draft?.assistantCandidate ?? null;
 
   if (!draft || !candidate) return null;

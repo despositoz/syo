@@ -11,12 +11,7 @@ import type { RatingDraft } from '@domain/rating/rating.types';
 export type WritingMode = null | 'free' | 'conversation';
 
 export type WritingScreen =
-  | 'mode'
-  | 'editor'
-  | 'conversation'
-  | 'processing'
-  | 'aiResult'
-  | 'preview';
+  'mode' | 'editor' | 'conversation' | 'processing' | 'aiResult' | 'preview';
 
 /** Operations the assistant can perform (spec §15). */
 export type AssistantOperation =
@@ -66,13 +61,7 @@ export interface ConversationTurn {
 }
 
 export type ConversationStatus =
-  | 'idle'
-  | 'loadingQuestion'
-  | 'answering'
-  | 'readyToCompose'
-  | 'composing'
-  | 'complete'
-  | 'error';
+  'idle' | 'loadingQuestion' | 'answering' | 'readyToCompose' | 'composing' | 'complete' | 'error';
 
 export type CompletionReason = 'enoughMaterial' | 'userFinished' | 'maxQuestions' | null;
 

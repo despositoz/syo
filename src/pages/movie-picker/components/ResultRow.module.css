@@ -14,7 +14,11 @@
 }
 
 .poster {
+  flex: 0 0 60px;
+  width: 60px;
+  aspect-ratio: 2 / 3;
   border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
 .body {

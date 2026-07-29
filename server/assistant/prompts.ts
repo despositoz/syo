@@ -7,12 +7,7 @@
  */
 
 export type Operation =
-  | 'nextQuestion'
-  | 'replaceQuestion'
-  | 'collect'
-  | 'correct'
-  | 'shorten'
-  | 'connect';
+  'nextQuestion' | 'replaceQuestion' | 'collect' | 'correct' | 'shorten' | 'connect';
 
 /** Bumped whenever the wording below changes; stored with every revision. */
 export const PROMPT_VERSIONS: Record<Operation, string> = {
@@ -78,7 +73,9 @@ const filmLine = (context: PromptContext): string =>
 const answersBlock = (context: PromptContext): string =>
   (context.conversation?.turns ?? [])
     .filter((turn) => turn.answerText?.trim())
-    .map((turn, index) => `${index + 1}. Вопрос: ${turn.questionText}\n   Ответ: ${turn.answerText}`)
+    .map(
+      (turn, index) => `${index + 1}. Вопрос: ${turn.questionText}\n   Ответ: ${turn.answerText}`,
+    )
     .join('\n');
 
 /** The system prompt and the user message for one operation. */

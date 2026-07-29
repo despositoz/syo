@@ -65,6 +65,7 @@
 
 .posterHolder {
   width: 96px;
+  aspect-ratio: 2 / 3;
   flex: none;
 }
 

@@ -92,8 +92,11 @@ export const DiaryPage = () => {
       <div className={`${styles.scroll} scroll-y`}>
         <main className={styles.content}>
           <header className={styles.header}>
-            <h1 className={styles.title}>Дневник</h1>
-            {entries.length ? <span className={styles.count}>{entries.length}</span> : null}
+            {/* Title and count are one object; the toggle is the other. */}
+            <div className={styles.titleGroup}>
+              <h1 className={styles.title}>Дневник</h1>
+              {entries.length ? <span className={styles.count}>{entries.length}</span> : null}
+            </div>
 
             {entries.length ? (
               <div className={styles.viewToggle} role="group" aria-label="Вид списка">

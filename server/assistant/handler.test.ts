@@ -7,10 +7,7 @@ const BOT_TOKEN = '123456:test-token';
 const NOW = Date.parse('2026-07-29T12:00:00.000Z');
 
 /** Builds initData the way Telegram does, so the check is a real check. */
-const signInitData = (
-  fields: Record<string, string>,
-  token = BOT_TOKEN,
-): string => {
+const signInitData = (fields: Record<string, string>, token = BOT_TOKEN): string => {
   const checkString = Object.entries(fields)
     .map(([key, value]) => `${key}=${value}`)
     .sort()
@@ -165,7 +162,9 @@ describe('the endpoint', () => {
       request(),
       environment({
         fetchImpl: (async () =>
-          new Response('Rate limit for key sk-ant-...', { status: 500 })) as unknown as typeof fetch,
+          new Response('Rate limit for key sk-ant-...', {
+            status: 500,
+          })) as unknown as typeof fetch,
       }),
     );
 
@@ -177,7 +176,10 @@ describe('the endpoint', () => {
 
   it('logs the outcome without a single word of the text', async () => {
     const events: Record<string, unknown>[] = [];
-    await handleAssistantRequest(request(), environment({ log: (event: Record<string, unknown>) => events.push(event) }));
+    await handleAssistantRequest(
+      request(),
+      environment({ log: (event: Record<string, unknown>) => events.push(event) }),
+    );
 
     const serialized = JSON.stringify(events);
     expect(serialized).toContain('assistant.ok');

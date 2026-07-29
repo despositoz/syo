@@ -65,8 +65,10 @@
 }
 
 /*
- * Rated: warm ivory, drifting a touch toward the film accent at the top of the
- * scale. Never orange, never neon yellow, no glow.
+ * Rated: one warm ivory for every filled star. The fill used to drift toward
+ * the dark film accent from the fourth star on, so 5/5 looked *less* filled
+ * than 3/5 — the opposite of what the scale means (P0.3.1 §10).
+ * Never orange, never neon yellow, no glow.
  */
 .shape :global(.star-fill) {
   fill: var(--color-text-on-media);
@@ -75,14 +77,6 @@
 
 .star[data-filled] .shape :global(.star-outline) {
   stroke: transparent;
-}
-
-.star[data-filled]:nth-child(n + 4) .shape :global(.star-fill) {
-  fill: color-mix(
-    in srgb,
-    var(--color-text-on-media) 80%,
-    rgb(var(--film-accent-rgb, 111, 42, 53))
-  );
 }
 
 /* The star under the finger lifts slightly — no bounce, no pulse. */

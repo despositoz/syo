@@ -16,6 +16,9 @@
   padding-right: max(var(--space-4), calc(var(--content-safe-right) + var(--space-4)));
   /* Clears the floating bottom bar and the system inset. */
   padding-bottom: calc(var(--safe-bottom) + 108px);
+  /* One card is not a billboard: the feed stops growing (P0.3.1 §16). */
+  width: min(100%, var(--content-max-feed));
+  margin-inline: auto;
 }
 
 .skeletons {

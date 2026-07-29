@@ -45,6 +45,13 @@
   min-width: 0;
 }
 
+/* On a wide window the flow stays a column, not a stretched panel (§16). */
+.body,
+.footer {
+  width: min(100%, var(--content-max-reading));
+  margin-inline: auto;
+}
+
 .body {
   flex: 1 1 auto;
   display: flex;
@@ -62,8 +69,7 @@
   /* Above the on-screen keyboard too: a CTA under the keyboard is unreachable. */
   padding: var(--space-3) calc(var(--content-safe-left) + var(--space-4))
     calc(
-      var(--content-safe-bottom) + var(--safe-bottom) + var(--space-4) +
-        var(--keyboard-height, 0px)
+      var(--content-safe-bottom) + var(--safe-bottom) + var(--space-4) + var(--keyboard-height, 0px)
     )
     calc(var(--content-safe-right) + var(--space-4));
   background: linear-gradient(to top, var(--color-bg) 62%, transparent);

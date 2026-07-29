@@ -40,9 +40,22 @@ if (!window.IntersectionObserver) {
     TestIntersectionObserver as unknown as typeof window.IntersectionObserver;
 }
 
+// jsdom has no ResizeObserver; layout code that publishes its own size needs one.
+if (!window.ResizeObserver) {
+  class TestResizeObserver implements ResizeObserver {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  window.ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+}
+
 if (!window.requestAnimationFrame) {
   window.requestAnimationFrame = ((callback: FrameRequestCallback) =>
-    setTimeout(() => callback(performance.now()), 16) as unknown as number) as typeof window.requestAnimationFrame;
+    setTimeout(
+      () => callback(performance.now()),
+      16,
+    ) as unknown as number) as typeof window.requestAnimationFrame;
   window.cancelAnimationFrame = ((handle: number) =>
     clearTimeout(handle)) as unknown as typeof window.cancelAnimationFrame;
 }

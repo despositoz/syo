@@ -13,15 +13,16 @@ const POSTER_WIDTH = 84;
 
 export const CompactCard = ({ film, onOpen }: CompactCardProps) => (
   <button type="button" className={styles.card} onClick={() => onOpen(film)}>
-    <Poster
-      title={film.title}
-      year={film.year}
-      posterPath={film.posterPath}
-      accent={film.accent}
-      width={POSTER_WIDTH}
-      decorative
-      className={styles.poster}
-    />
+    <span className={styles.poster} data-poster-frame="">
+      <Poster
+        title={film.title}
+        year={film.year}
+        posterPath={film.posterPath}
+        accent={film.accent}
+        requestWidth={POSTER_WIDTH}
+        decorative
+      />
+    </span>
     <span className={styles.body}>
       <span className={styles.title}>{film.title}</span>
       <span className={styles.meta}>{joinMeta([film.year, film.genres[0]])}</span>

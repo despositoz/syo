@@ -15,13 +15,13 @@ export interface FilmIdentityProps {
  */
 export const FilmIdentity = ({ film, size = 'compact' }: FilmIdentityProps) => (
   <div className={styles.identity} data-size={size}>
-    <div className={styles.poster}>
+    <div className={styles.poster} data-poster-frame="">
       <Poster
         title={film.filmTitle}
         year={film.releaseYear ?? ''}
         posterPath={film.posterPath ?? ''}
         accent={{ hex: '#6f2a35', rgb: film.dominantColor ?? '111, 42, 53' }}
-        width={size === 'hero' ? 168 : 56}
+        requestWidth={size === 'hero' ? 168 : 56}
         decorative
       />
     </div>

@@ -1,13 +1,21 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { cssVar, isTelegramBackVisible, mockTelegram, mockTmdb, pressTelegramBack } from './fixtures';
+import {
+  cssVar,
+  isTelegramBackVisible,
+  mockTelegram,
+  mockTmdb,
+  pressTelegramBack,
+} from './fixtures';
 
 /** Film page → "Начать оценку" → mode chooser. */
 const openModeChooser = async (page: Page) => {
   await page.goto('/');
   await page.getByText('Фильм 101').click();
   await expect(page.getByTestId('film-title')).toBeAttached();
-  await page.getByRole('button', { name: /Начать оценку|Продолжить оценку|Изменить оценку/ }).click();
+  await page
+    .getByRole('button', { name: /Начать оценку|Продолжить оценку|Изменить оценку/ })
+    .click();
   await expect(page.getByTestId('mode-deep')).toBeVisible();
 };
 
@@ -15,14 +23,18 @@ const stars = (page: Page) => page.getByRole('radio');
 
 /** Taps the n-th star (1-5). */
 const tapStar = async (page: Page, star: number) => {
-  await stars(page).nth(star - 1).click();
+  await stars(page)
+    .nth(star - 1)
+    .click();
 };
 
 /** Drags across the scale to the n-th star, proving the axis lock releases. */
 const dragToStar = async (page: Page, star: number) => {
   const group = page.getByTestId('star-rating');
   const box = await group.boundingBox();
-  const target = await stars(page).nth(star - 1).boundingBox();
+  const target = await stars(page)
+    .nth(star - 1)
+    .boundingBox();
   if (!box || !target) throw new Error('star control has no box');
 
   await page.mouse.move(box.x + 6, box.y + box.height / 2);

@@ -46,6 +46,15 @@
 
   --touch-min: 44px;
 
+  /*
+   * How wide a surface is allowed to get on a desktop window. A Mini App
+   * should not become a 390px column on a large screen, and one diary card
+   * should not become a 1200px billboard either (P0.3.1 §6.3, §16).
+   */
+  --content-max-reading: 640px;
+  --content-max-feed: 720px;
+  --content-max-diary: 760px;
+
   --z-content: 1;
   --z-parallax: 0;
   --z-shade: 20;
