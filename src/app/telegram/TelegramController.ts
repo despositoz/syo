@@ -156,6 +156,15 @@ export class TelegramController {
     return this.state;
   }
 
+  /**
+   * The raw initData string, for the one purpose it has: proving to SYO's own
+   * backend who is calling. It is never parsed for trust here, never stored and
+   * never logged — only Telegram's signature over it means anything.
+   */
+  getInitData(): string {
+    return this.webApp?.initData ?? '';
+  }
+
   subscribe(listener: TelegramStateListener): () => void {
     this.listeners.add(listener);
     return () => {

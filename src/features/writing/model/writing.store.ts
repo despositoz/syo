@@ -16,6 +16,7 @@ import {
   type WritingScreen,
 } from '@domain/writing/writing.types';
 import { StorageError } from '@shared/storage/db';
+import type { AssistantError } from '../gateway/assistant.gateway';
 import {
   activeDraftRepository,
   type ActiveDraftRepository,
@@ -39,6 +40,10 @@ export interface WritingState {
   storageError: StorageError | null;
   /** True while typed text exists only in memory. */
   dirty: boolean;
+  /** True while a request to the assistant is in the air. */
+  assistantBusy: boolean;
+  /** The last assistant failure, in a form the UI can speak about. */
+  assistantError: AssistantError | null;
 
   hydrate: () => Promise<void>;
   start: (options: CreateWritingDraftOptions) => Promise<WritingDraft>;
@@ -55,6 +60,8 @@ export interface WritingState {
   flush: () => Promise<void>;
   retrySave: () => Promise<void>;
   clearStorageError: () => void;
+  setAssistantBusy: (busy: boolean) => void;
+  setAssistantError: (error: AssistantError | null) => void;
 }
 
 let repository: ActiveDraftRepository = activeDraftRepository;
@@ -95,6 +102,8 @@ export const useWritingStore = create<WritingState>((set, get) => {
     hydrated: false,
     storageError: null,
     dirty: false,
+    assistantBusy: false,
+    assistantError: null,
 
     hydrate: async () => {
       const stored = await repository.getActive().catch(() => null);
@@ -187,5 +196,8 @@ export const useWritingStore = create<WritingState>((set, get) => {
     },
 
     clearStorageError: () => set({ storageError: null }),
+
+    setAssistantBusy: (assistantBusy) => set({ assistantBusy }),
+    setAssistantError: (assistantError) => set({ assistantError }),
   };
 });

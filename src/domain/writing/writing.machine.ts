@@ -3,6 +3,8 @@ import {
   MAX_ANSWERED_QUESTIONS,
   TEXT_LIMIT,
   type AssistantCandidate,
+  type AssistantOperation,
+  type AssistantRequestSnapshot,
   type ConversationQuestion,
   type ConversationState,
   type TextRevision,
@@ -136,10 +138,27 @@ export const addRevision = (
 
 /* --- assistant -------------------------------------------------------- */
 
+/**
+ * Records what was asked for, before anything leaves the device. A response
+ * that does not match this snapshot is stale and never reaches the editor.
+ */
 export const beginAssistantRequest = (
   draft: WritingDraft,
-  request: { requestId: string; operation: WritingDraft['pendingAssistantRequest'] },
-): WritingDraft => advance(draft, { pendingAssistantRequest: request.operation });
+  request: AssistantRequestSnapshot,
+): WritingDraft => advance(draft, { pendingAssistantRequest: request });
+
+/** The snapshot for an operation about to be sent. */
+export const requestSnapshot = (
+  draft: WritingDraft,
+  operation: AssistantOperation,
+  requestId: string,
+): AssistantRequestSnapshot => ({
+  requestId,
+  operation,
+  baseRevision: draft.revision,
+  baseRevisionId: draft.selectedRevisionId,
+  startedAt: nowIso(),
+});
 
 /**
  * A candidate is accepted only when it answers the request we are still
@@ -170,14 +189,23 @@ export const acceptCandidate = (draft: WritingDraft): WritingDraft => {
   const candidate = draft.assistantCandidate;
   if (!candidate) return draft;
 
-  const { draft: next } = addRevision(draft, {
+  /*
+   * The user's own words become a revision first. Typing alone creates no
+   * revision, so without this the moment of accepting a suggestion would be
+   * the moment the original stopped existing — and it must always be
+   * reachable (spec §2.3).
+   */
+  const withOriginal = draft.workingText.trim()
+    ? addRevision(draft, { text: draft.workingText, kind: 'user', origin: 'manual' }).draft
+    : draft;
+
+  const { draft: next } = addRevision(withOriginal, {
     text: candidate.text,
     kind: 'assistant',
     origin: candidate.operation,
     changeSummary: candidate.changeSummary,
     promptVersion: candidate.promptVersion,
     requestId: candidate.requestId,
-    parentRevisionId: candidate.baseRevisionId,
   });
   return advance(next, { assistantCandidate: null, currentScreen: 'editor' });
 };

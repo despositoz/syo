@@ -1,14 +1,39 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { useNavigationController, useServices } from '@app/appServices';
 import { diaryTextFromDraft, hasMeaningfulText } from '@domain/diary/diary.text';
-import { TEXT_LIMIT, TEXT_WARN_AT, type WritingScreen } from '@domain/writing/writing.types';
+import {
+  acceptCandidate,
+  answeredTurns,
+  canCompose,
+  editCandidateManually,
+  keepOriginal,
+  shouldOfferCompose,
+} from '@domain/writing/writing.machine';
+import {
+  ANSWER_LIMIT,
+  TEXT_LIMIT,
+  TEXT_WARN_AT,
+  type TextOperation,
+  type WritingScreen,
+} from '@domain/writing/writing.types';
+import type { DiaryEntry } from '@domain/diary/diary.types';
 import { StorageError } from '@shared/storage/db';
 import { Button } from '@shared/ui/Button/Button';
+import { Sheet } from '@shared/ui/Sheet/Sheet';
 import { useSnackbarStore } from '@shared/ui/Snackbar/snackbarStore';
 import { RatingFlowShell } from '@features/rating/components/RatingFlowShell';
 import { ExitDraftSheet } from '@features/rating/components/ExitDraftSheet';
-import { useDiaryStore } from '@features/diary/model/diary.store';
+import { useDiaryEntry, useDiaryStore } from '@features/diary/model/diary.store';
 import { useWritingStore } from '../model/writing.store';
+import {
+  answerQuestion,
+  askNextQuestion,
+  cancelAssistant,
+  composeFromConversation,
+  runTextOperation,
+  skipCurrentQuestion,
+} from '../model/assistant.actions';
+import { assistantBusyText, assistantErrorText, revisionLabel } from '../model/assistantMessages';
 import { useWritingFlow, useWritingRouteGuard } from '../model/useWritingFlow';
 import styles from './WritingPage.module.css';
 
@@ -26,28 +51,62 @@ export interface WritingPageProps {
  */
 export const WritingPage = ({ entryId, screen }: WritingPageProps) => {
   const guard = useWritingRouteGuard(entryId, screen);
-  const { draft, navigation, openScreen, leave } = useWritingFlow(entryId, screen);
+  const { draft, openScreen, leave } = useWritingFlow(entryId, screen);
+  const entry = useDiaryEntry(entryId);
+  const busy = useWritingStore((state) => state.assistantBusy);
+
+  /*
+   * A candidate arriving is what opens the result screen — not the tap that
+   * asked for it. The request may finish while the user is elsewhere in the
+   * flow, and the answer must not be shown behind the editor.
+   */
+  const candidate = draft?.assistantCandidate ?? null;
+  useEffect(() => {
+    if (candidate && screen !== 'aiResult') openScreen('aiResult');
+  }, [candidate, screen, openScreen]);
 
   if (guard === 'redirecting' || !draft) return null;
 
   const accentRgb = draft.film.dominantColor ?? undefined;
+  /*
+   * A text operation takes over the screen: it is long, and the user must be
+   * able to see it and cancel it. A question does not — the conversation shows
+   * its own quiet loading state, because swapping the whole screen out and
+   * back would unmount it and lose what is on it.
+   */
+  const pending = draft.pendingAssistantRequest;
+  const showProcessing =
+    busy &&
+    pending !== null &&
+    pending.operation !== 'nextQuestion' &&
+    pending.operation !== 'replaceQuestion';
 
   return (
     <RatingFlowShell onBack={() => leave()} accentRgb={accentRgb}>
-      {screen === 'mode' ? <ModeScreen entryId={entryId} onPick={openScreen} /> : null}
-      {screen === 'editor' ? (
-        <EditorScreen entryId={entryId} onPreview={() => openScreen('preview')} onLeave={leave} />
-      ) : null}
-      {screen === 'preview' ? (
-        <PreviewScreen entryId={entryId} onBack={() => openScreen('editor')} />
-      ) : null}
-      {screen === 'conversation' || screen === 'aiResult' || screen === 'processing' ? (
-        // Filled in with the assistant flow; the offline branch never lands here.
-        <ConversationPlaceholder
-          onBack={() => openScreen('mode')}
-          navigateAway={navigation.goBack}
-        />
-      ) : null}
+      {showProcessing ? (
+        <ProcessingScreen operation={pending?.operation ?? ''} />
+      ) : (
+        <>
+          {screen === 'mode' ? <ModeScreen entryId={entryId} onPick={openScreen} /> : null}
+          {screen === 'editor' ? (
+            <EditorScreen
+              entryId={entryId}
+              entry={entry}
+              onPreview={() => openScreen('preview')}
+              onLeave={leave}
+            />
+          ) : null}
+          {screen === 'preview' ? (
+            <PreviewScreen entryId={entryId} onBack={() => openScreen('editor')} />
+          ) : null}
+          {screen === 'conversation' ? (
+            <ConversationScreen entry={entry} onEditor={() => openScreen('editor')} />
+          ) : null}
+          {screen === 'aiResult' || screen === 'processing' ? (
+            <AiResultScreen onEditor={() => openScreen('editor')} />
+          ) : null}
+        </>
+      )}
     </RatingFlowShell>
   );
 };
@@ -126,10 +185,12 @@ const ModeScreen = ({
 
 const EditorScreen = ({
   entryId,
+  entry,
   onPreview,
   onLeave,
 }: {
   entryId: string;
+  entry: DiaryEntry | null;
   onPreview: () => void;
   onLeave: () => void;
 }) => {
@@ -142,6 +203,7 @@ const EditorScreen = ({
 
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const [exitOpen, setExitOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
 
   // Recovery comfort: coming back puts the caret where it was, not at the top.
   useEffect(() => {
@@ -212,6 +274,20 @@ const EditorScreen = ({
         </div>
       </div>
 
+      <AssistantBar entry={entry} area={areaRef} />
+
+      {/* Every version stays reachable, including the very first one. */}
+      {draft.revisions.length > 1 ? (
+        <Button
+          variant="ghost"
+          block
+          onClick={() => setVersionsOpen(true)}
+          data-testid="writing-versions"
+        >
+          Версии текста ({draft.revisions.length})
+        </Button>
+      ) : null}
+
       <Button
         variant="primary"
         block
@@ -228,6 +304,8 @@ const EditorScreen = ({
       <Button variant="ghost" block onClick={() => setExitOpen(true)} data-testid="writing-exit">
         Выйти
       </Button>
+
+      <VersionsSheet open={versionsOpen} onClose={() => setVersionsOpen(false)} />
 
       <ExitDraftSheet
         open={exitOpen}
@@ -340,21 +418,366 @@ const PreviewScreen = ({ entryId, onBack }: { entryId: string; onBack: () => voi
   );
 };
 
-const ConversationPlaceholder = ({
-  onBack,
-  navigateAway,
+/* --- SYO operations on an existing text --------------------------------- */
+
+const OPERATIONS: { id: TextOperation; label: string }[] = [
+  { id: 'correct', label: 'Проверить' },
+  { id: 'shorten', label: 'Сократить' },
+  { id: 'connect', label: 'Связать' },
+];
+
+/**
+ * SYO's help, always on request (spec §15.1). Nothing here runs by itself, and
+ * every operation produces a candidate the user still has to accept.
+ */
+const AssistantBar = ({
+  entry,
+  area,
 }: {
-  onBack: () => void;
-  navigateAway: () => void;
-}) => (
-  <div className={styles.content} data-testid="writing-conversation">
-    <h1 className={styles.question}>Разговор с SYO</h1>
-    <p className={styles.lead}>Пока недоступен — можно написать текст самому.</p>
-    <Button variant="primary" block onClick={onBack}>
-      Выбрать другой способ
-    </Button>
-    <Button variant="ghost" block onClick={navigateAway}>
-      Закрыть
+  entry: DiaryEntry | null;
+  area: RefObject<HTMLTextAreaElement | null>;
+}) => {
+  const draft = useWritingStore((state) => state.draft);
+  const error = useWritingStore((state) => state.assistantError);
+  const setError = useWritingStore((state) => state.setAssistantError);
+  const flush = useWritingStore((state) => state.flush);
+
+  const [lastOperation, setLastOperation] = useState<TextOperation | null>(null);
+
+  const ask = useCallback(
+    async (operation: TextOperation) => {
+      if (!entry) return;
+      setLastOperation(operation);
+      // What is on screen is written down before anything is sent: a request
+      // must never be the reason a sentence was lost.
+      await flush();
+
+      const element = area.current;
+      const selection =
+        element && element.selectionEnd > element.selectionStart
+          ? { start: element.selectionStart, end: element.selectionEnd }
+          : undefined;
+
+      await runTextOperation({ entry, operation, ...(selection ? { selection } : {}) });
+    },
+    [entry, flush, area],
+  );
+
+  if (!draft) return null;
+  const disabled = !entry || !hasMeaningfulText(draft.workingText);
+
+  return (
+    <div className={styles.assistant}>
+      <div className={styles.assistantRow} role="group" aria-label="Помощь SYO">
+        {OPERATIONS.map((operation) => (
+          <button
+            key={operation.id}
+            type="button"
+            className={styles.assistantButton}
+            disabled={disabled}
+            onClick={() => void ask(operation.id)}
+            data-testid={`writing-op-${operation.id}`}
+          >
+            {operation.label}
+          </button>
+        ))}
+      </div>
+
+      {error ? (
+        <div className={styles.assistantError} role="alert" data-testid="writing-assistant-error">
+          <span>{assistantErrorText(error)}</span>
+          {error.retriable && lastOperation ? (
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                void ask(lastOperation);
+              }}
+              data-testid="writing-assistant-retry"
+            >
+              Повторить
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+/* --- waiting ------------------------------------------------------------ */
+
+/**
+ * The one screen that must never look stuck: it says what is happening and it
+ * can always be cancelled, and cancelling costs the user nothing (spec §20).
+ */
+const ProcessingScreen = ({ operation }: { operation: string }) => (
+  <div className={styles.content} data-testid="writing-processing">
+    <p className={styles.question} aria-live="polite">
+      {assistantBusyText(operation)}
+    </p>
+    <p className={styles.lead}>Твой текст сохранён. Это ничего не изменит без твоего согласия.</p>
+    <Button variant="ghost" block onClick={() => cancelAssistant()} data-testid="writing-cancel-ai">
+      Отменить
     </Button>
   </div>
 );
+
+/* --- conversation ------------------------------------------------------- */
+
+const ConversationScreen = ({
+  entry,
+  onEditor,
+}: {
+  entry: DiaryEntry | null;
+  onEditor: () => void;
+}) => {
+  const draft = useWritingStore((state) => state.draft);
+  const error = useWritingStore((state) => state.assistantError);
+  const setError = useWritingStore((state) => state.setAssistantError);
+  const busy = useWritingStore((state) => state.assistantBusy);
+  const [answer, setAnswer] = useState('');
+
+  const question = draft?.conversation?.currentQuestion ?? null;
+  const answered = draft ? answeredTurns(draft).length : 0;
+
+  /*
+   * Only the very first question is asked automatically. Every later one is
+   * requested by answering, skipping or replacing — an effect that asks
+   * whenever no question happens to be on screen would fire again on every
+   * commit and throw away the question that just arrived.
+   */
+  useEffect(() => {
+    if (!entry || !draft || question || busy) return;
+    if (draft.pendingAssistantRequest || (draft.conversation?.turns.length ?? 0) > 0) return;
+    // A failed attempt is not retried by itself: retrying in an effect turns
+    // one dead network into an endless stream of requests.
+    if (draft.conversation?.status === 'error') return;
+    void askNextQuestion(entry);
+  }, [entry, draft, question, busy]);
+
+  if (!draft) return null;
+
+  const submit = async () => {
+    if (!entry || !answer.trim()) return;
+    const words = answer;
+    setAnswer('');
+    await answerQuestion(entry, words);
+  };
+
+  return (
+    <div className={styles.content} data-testid="writing-conversation">
+      {question ? (
+        <>
+          {question.leadIn ? <p className={styles.lead}>{question.leadIn}</p> : null}
+          <h1 className={styles.question} data-testid="writing-question">
+            {question.question}
+          </h1>
+
+          <textarea
+            className={styles.textarea}
+            value={answer}
+            maxLength={ANSWER_LIMIT}
+            placeholder="Своими словами"
+            aria-label="Ответ на вопрос"
+            onChange={(event) => setAnswer(event.target.value)}
+            data-testid="writing-answer"
+          />
+
+          <Button
+            variant="primary"
+            block
+            disabled={!answer.trim()}
+            onClick={() => void submit()}
+            data-testid="writing-answer-send"
+          >
+            Ответить
+          </Button>
+
+          <div className={styles.assistantRow}>
+            <button
+              type="button"
+              className={styles.assistantButton}
+              onClick={() => entry && void skipCurrentQuestion(entry)}
+              data-testid="writing-skip"
+            >
+              Пропустить
+            </button>
+            <button
+              type="button"
+              className={styles.assistantButton}
+              onClick={() => entry && void askNextQuestion(entry, true)}
+              data-testid="writing-another-question"
+            >
+              Другой вопрос
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className={styles.lead} aria-live="polite" data-testid="writing-question-loading">
+          {busy
+            ? 'SYO думает над вопросом'
+            : answered
+              ? `Ответов: ${answered}`
+              : 'SYO готовит первый вопрос'}
+        </p>
+      )}
+
+      {/* Composing from nothing would be inventing an opinion (spec §13.10). */}
+      {canCompose(draft) ? (
+        <Button
+          variant={shouldOfferCompose(draft) ? 'primary' : 'secondary'}
+          block
+          onClick={() => entry && void composeFromConversation(entry)}
+          data-testid="writing-compose"
+        >
+          Собрать текст из ответов
+        </Button>
+      ) : null}
+
+      {error ? (
+        <div className={styles.assistantError} role="alert" data-testid="writing-assistant-error">
+          <span>{assistantErrorText(error)}</span>
+          {error.retriable && entry ? (
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                void askNextQuestion(entry);
+              }}
+              data-testid="writing-assistant-retry"
+            >
+              Повторить
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <Button variant="ghost" block onClick={onEditor} data-testid="writing-to-editor">
+        Написать самому
+      </Button>
+    </div>
+  );
+};
+
+/* --- what SYO proposed --------------------------------------------------- */
+
+/**
+ * A candidate, never a replacement (spec §21).
+ *
+ * The original is one tap away and stays the default: accepting is a choice,
+ * not the path of least resistance.
+ */
+const AiResultScreen = ({ onEditor }: { onEditor: () => void }) => {
+  const draft = useWritingStore((state) => state.draft);
+  const apply = useWritingStore((state) => state.apply);
+  const [showOriginal, setShowOriginal] = useState(false);
+
+  const candidate = draft?.assistantCandidate ?? null;
+
+  if (!draft || !candidate) return null;
+
+  return (
+    <div className={styles.content} data-testid="writing-ai-result">
+      <h1 className={styles.question}>SYO предлагает</h1>
+      {candidate.changeSummary ? (
+        <p className={styles.lead} data-testid="writing-change-summary">
+          {candidate.changeSummary}
+        </p>
+      ) : null}
+
+      <p className={styles.preview} data-testid="writing-candidate">
+        {candidate.text}
+      </p>
+
+      {/* Both versions are readable side by side before anything is decided. */}
+      {draft.workingText.trim() ? (
+        <>
+          <Button
+            variant="ghost"
+            block
+            onClick={() => setShowOriginal((open) => !open)}
+            data-testid="writing-toggle-original"
+          >
+            {showOriginal ? 'Скрыть твой вариант' : 'Показать твой вариант'}
+          </Button>
+          {showOriginal ? (
+            <p className={styles.original} data-testid="writing-original">
+              {draft.workingText}
+            </p>
+          ) : null}
+        </>
+      ) : null}
+
+      <Button
+        variant="primary"
+        block
+        onClick={() => {
+          void apply(acceptCandidate).then(onEditor);
+        }}
+        data-testid="writing-accept"
+      >
+        Принять
+      </Button>
+      <Button
+        variant="secondary"
+        block
+        onClick={() => {
+          void apply(keepOriginal).then(onEditor);
+        }}
+        data-testid="writing-keep-original"
+      >
+        Оставить свой вариант
+      </Button>
+      <Button
+        variant="ghost"
+        block
+        onClick={() => {
+          void apply(editCandidateManually).then(onEditor);
+        }}
+        data-testid="writing-edit-candidate"
+      >
+        Редактировать вручную
+      </Button>
+    </div>
+  );
+};
+
+/* --- versions ------------------------------------------------------------ */
+
+/** Every version ever saved, including the user's first one (spec §21.7). */
+const VersionsSheet = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const draft = useWritingStore((state) => state.draft);
+  const apply = useWritingStore((state) => state.apply);
+
+  if (!draft) return null;
+
+  return (
+    <Sheet open={open} title="Версии текста" onClose={onClose}>
+      <div className={styles.versions}>
+        {[...draft.revisions].reverse().map((revision) => (
+          <button
+            key={revision.id}
+            type="button"
+            className={styles.version}
+            data-selected={revision.id === draft.selectedRevisionId || undefined}
+            onClick={() => {
+              void apply((current) => ({
+                ...current,
+                selectedRevisionId: revision.id,
+                workingText: revision.text,
+                updatedAt: new Date().toISOString(),
+                revision: current.revision + 1,
+              })).then(onClose);
+            }}
+            data-testid={`writing-version-${revision.id}`}
+          >
+            <span className={styles.versionTitle}>
+              {revisionLabel(revision.origin, revision.kind)}
+            </span>
+            <span className={styles.versionExcerpt}>{revision.text.slice(0, 120)}</span>
+          </button>
+        ))}
+      </div>
+    </Sheet>
+  );
+};

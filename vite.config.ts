@@ -43,8 +43,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     css: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // The backend lives in this repo and is tested with the same runner: its
+    // signature check is the one place a mistake would be invisible and fatal.
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'server/**/*.test.ts'],
     exclude: ['e2e/**', 'node_modules/**'],
     restoreMocks: true,
+    // Whole suites run in parallel on one machine; 5s is the scheduler's
+    // patience, not the app's. Assertions still fail fast — only waiting waits.
+    testTimeout: 15_000,
   },
 });

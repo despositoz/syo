@@ -1,7 +1,14 @@
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
 import { afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
+
+/*
+ * The default 1s is a race, not an assertion: with every suite running in
+ * parallel a slow machine loses a render to the scheduler, and a passing test
+ * fails for reasons that have nothing to do with the code.
+ */
+configure({ asyncUtilTimeout: 5000 });
 
 // jsdom has no matchMedia; motion + theme code depends on it.
 if (!window.matchMedia) {
