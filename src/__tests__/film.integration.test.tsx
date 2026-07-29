@@ -18,6 +18,18 @@ const openFirstFilm = async (user: ReturnType<typeof userEvent.setup>) => {
   await screen.findByTestId('film-title');
 };
 
+/*
+ * Lets the presentation preflight and any late image event land before the
+ * test touches the page. Without it a click can hit a hero that is replaced
+ * in the same tick, and the press goes to a detached node — which is what made
+ * the watchlist tests flaky under a loaded machine.
+ */
+const settle = async (ms = 250) => {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  });
+};
+
 describe('film page', () => {
   beforeEach(async () => {
     await resetAppState();
@@ -84,36 +96,28 @@ describe('film page', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Тихий свет' })).toBeInTheDocument();
   });
 
-  /*
-   * Retried: under a full parallel suite this one occasionally loses the click
-   * to a page-layer swap on a loaded machine. The assertion is unchanged — a
-   * real regression fails every attempt. Predates P0.3.
-   */
-  it(
-    'toggles the watchlist from the hero button and confirms with a snackbar',
-    { retry: 2 },
-    async () => {
-      installFetchMock();
-      const user = userEvent.setup();
-      renderApp({ telegram: createTelegramFake({ isFullscreen: true }) });
+  it('toggles the watchlist from the hero button and confirms with a snackbar', async () => {
+    installFetchMock();
+    const user = userEvent.setup();
+    renderApp({ telegram: createTelegramFake({ isFullscreen: true }) });
 
-      await openFirstFilm(user);
-      // Re-queried every time: the page swaps its layer as the presentation
-      // settles, and a node captured once would be detached and never update.
-      const hero = () => screen.getByTestId('watchlist-hero');
-      expect(hero()).toHaveAttribute('aria-pressed', 'false');
+    await openFirstFilm(user);
+    await settle();
+    // Re-queried every time: the page swaps its layer as the presentation
+    // settles, and a node captured once would be detached and never update.
+    const hero = () => screen.getByTestId('watchlist-hero');
+    expect(hero()).toHaveAttribute('aria-pressed', 'false');
 
-      await user.click(hero());
+    await user.click(hero());
 
-      await waitFor(() => expect(hero()).toHaveAttribute('aria-pressed', 'true'));
-      expect(await screen.findByText(/Добавлено в «Посмотреть позже»/)).toBeInTheDocument();
-      await waitFor(async () => expect(await db.watchlist.get(101)).toBeTruthy());
+    await waitFor(() => expect(hero()).toHaveAttribute('aria-pressed', 'true'));
+    expect(await screen.findByText(/Добавлено в «Посмотреть позже»/)).toBeInTheDocument();
+    await waitFor(async () => expect(await db.watchlist.get(101)).toBeTruthy());
 
-      await user.click(hero());
-      await waitFor(() => expect(hero()).toHaveAttribute('aria-pressed', 'false'));
-      expect(await screen.findByText('Убрано из списка')).toBeInTheDocument();
-    },
-  );
+    await user.click(hero());
+    await waitFor(() => expect(hero()).toHaveAttribute('aria-pressed', 'false'));
+    expect(await screen.findByText('Убрано из списка')).toBeInTheDocument();
+  });
 
   it('never shows both watchlist projections at once', async () => {
     installFetchMock();
@@ -140,6 +144,7 @@ describe('film page', () => {
     renderApp({ telegram: createTelegramFake({ isFullscreen: true }) });
 
     await openFirstFilm(user);
+    await settle();
 
     await user.click(screen.getByTestId('watchlist-hero'));
     await waitFor(() =>
