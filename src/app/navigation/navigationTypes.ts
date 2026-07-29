@@ -1,3 +1,5 @@
+import type { WritingScreen } from '@domain/writing/writing.types';
+
 export type RootTab = 'feed' | 'diary' | 'profile';
 
 export interface FilmRouteParams {
@@ -16,11 +18,23 @@ export type RatingRoute =
   | { kind: 'rateDeep'; filmId: number; step: number }
   | { kind: 'rateResult'; filmId: number };
 
+/**
+ * Writing is a nested full-screen scenario like rating: one route kind with the
+ * screen inside it, so moving between mode → editor → preview is an internal
+ * transition rather than a page change.
+ */
+export interface WritingRoute {
+  kind: 'write';
+  entryId: string;
+  screen: WritingScreen;
+}
+
 export type Route =
   | { kind: 'root'; tab: RootTab }
   | { kind: 'picker' }
   | ({ kind: 'film' } & FilmRouteParams)
   | RatingRoute
+  | WritingRoute
   | { kind: 'diaryEntry'; entryId: string };
 
 export type RouteKind = Route['kind'];
@@ -46,6 +60,8 @@ export const isRatingRoute = (route: Route): route is RatingRoute =>
   route.kind === 'rateDeep' ||
   route.kind === 'rateResult';
 
+export const isWritingRoute = (route: Route): route is WritingRoute => route.kind === 'write';
+
 export const routeKey = (route: Route): string => {
   switch (route.kind) {
     case 'root':
@@ -64,6 +80,10 @@ export const routeKey = (route: Route): string => {
       return `rate:${route.filmId}:deep`;
     case 'rateResult':
       return `rate:${route.filmId}:result`;
+    case 'write':
+      // All writing screens share one key, so switching screens keeps the
+      // editor mounted and the typed text on screen.
+      return `write:${route.entryId}`;
     case 'diaryEntry':
       return `diary:${route.entryId}`;
   }

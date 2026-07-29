@@ -68,3 +68,29 @@
   font-size: 0.8125rem;
   color: var(--color-text-tertiary);
 }
+
+/* The user's own words, set for reading: never a card, never a quote block. */
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.textBody {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+/* A spoiler is hidden until asked for — never blurred-but-readable. */
+.spoilerCover {
+  min-height: var(--touch-min);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-hairline);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+}

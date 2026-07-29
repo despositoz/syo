@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigationController, useServices } from '@app/appServices';
 import { resultPhrase } from '@domain/rating/rating.constants';
-import { resumeTarget } from '@domain/rating/rating.machine';
 import { formatEntryDate } from '@domain/diary/diary.schema';
+import { selectedText } from '@domain/diary/diary.text';
+import type { DiaryText } from '@domain/diary/diary.text';
 import type { DiaryEntry } from '@domain/diary/diary.types';
-import type { RatingDraft, RatingMode } from '@domain/rating/rating.types';
+import type { RatingMode } from '@domain/rating/rating.types';
 import { Sheet } from '@shared/ui/Sheet/Sheet';
 import { Button } from '@shared/ui/Button/Button';
 import { IconButton } from '@shared/ui/IconButton/IconButton';
@@ -14,8 +15,14 @@ import { useTelegram } from '@app/telegram/telegramStore';
 import { RatingSummary } from '@features/rating/components/RatingSummary';
 import { RatingBreakdown } from '@features/rating/components/RatingBreakdown';
 import { FilmIdentity } from '@features/rating/components/FilmIdentity';
-import { useRatingStore } from '@features/rating/model/rating.store';
-import { replaceDraft, requestDraft } from '@features/rating/model/draftCoordinator';
+import {
+  openDraftRoute,
+  replaceDraft,
+  replaceWithWritingDraft,
+  requestDraft,
+  requestWritingDraft,
+  useActiveDraft,
+} from '@features/drafts/draftCoordinator';
 import { DraftConflictSheet } from '@features/rating/components/DraftConflictSheet';
 import { useDiaryStore } from '../model/diary.store';
 import { diaryRepository } from '../repositories/diary.repository';
@@ -43,7 +50,8 @@ export const DiaryEntryPage = ({ entryId }: DiaryEntryPageProps) => {
   const remove = useDiaryStore((state) => state.remove);
   const restore = useDiaryStore((state) => state.restore);
   const showSnackbar = useSnackbarStore((state) => state.show);
-  const activeDraft = useRatingStore((state) => state.draft);
+  const saveText = useDiaryStore((state) => state.saveText);
+  const activeDraft = useActiveDraft();
 
   const [entry, setEntry] = useState<DiaryEntry | null>(
     () => entries.find((item) => item.id === entryId) ?? null,
@@ -51,6 +59,9 @@ export const DiaryEntryPage = ({ entryId }: DiaryEntryPageProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [conflictMode, setConflictMode] = useState<RatingMode | null>(null);
+  /** Set when starting to write hit an existing draft of something else. */
+  const [textConflict, setTextConflict] = useState(false);
+  const [textRevealed, setTextRevealed] = useState(false);
 
   useEffect(() => {
     const found = entries.find((item) => item.id === entryId);
@@ -70,19 +81,7 @@ export const DiaryEntryPage = ({ entryId }: DiaryEntryPageProps) => {
   }, [entries, entryId]);
 
   const openDraft = useCallback(
-    (draft: RatingDraft) => {
-      const target = resumeTarget(draft);
-      const filmId = draft.filmId;
-      if (target.screen === 'deep') {
-        navigation.openRating({ kind: 'rateDeep', filmId, step: target.step });
-      } else if (target.screen === 'quick') {
-        navigation.openRating({ kind: 'rateQuick', filmId });
-      } else if (target.screen === 'result') {
-        navigation.openRating({ kind: 'rateResult', filmId });
-      } else {
-        navigation.openRating({ kind: 'rateMode', filmId });
-      }
-    },
+    (draft: Parameters<typeof openDraftRoute>[1]) => openDraftRoute(navigation, draft),
     [navigation],
   );
 
@@ -125,6 +124,64 @@ export const DiaryEntryPage = ({ entryId }: DiaryEntryPageProps) => {
     setConflictMode(null);
     openDraft(await replaceDraft(editOptions(conflictMode)));
   }, [entry, conflictMode, editOptions, openDraft]);
+
+  const writingOptions = useCallback(
+    () => ({
+      entryId: entry!.id,
+      film: {
+        filmId: entry!.filmId,
+        filmTitle: entry!.filmTitle,
+        posterPath: entry!.posterPath,
+        releaseYear: entry!.releaseYear,
+      },
+      source: 'journalEntry' as const,
+      // Editing starts from what is saved, and keeps the history behind it.
+      initialText: entry!.text ? selectedText(entry!.text) : '',
+      initialRevisions: entry!.text?.revisions ?? [],
+      selectedRevisionId: entry!.text?.selectedRevisionId ?? null,
+    }),
+    [entry],
+  );
+
+  /** Writing goes through the same coordinator as any other draft. */
+  const write = useCallback(async () => {
+    if (!entry) return;
+    setMenuOpen(false);
+
+    const outcome = await requestWritingDraft(writingOptions());
+    if (outcome.kind === 'conflict') {
+      setTextConflict(true);
+      return;
+    }
+    openDraft(outcome.draft);
+  }, [entry, writingOptions, openDraft]);
+
+  const writeAfterConfirm = useCallback(async () => {
+    setTextConflict(false);
+    openDraft(await replaceWithWritingDraft(writingOptions()));
+  }, [writingOptions, openDraft]);
+
+  /**
+   * Deleting the text leaves the rating alone, and the removed text is held for
+   * the Undo window so "Вернуть" restores the words, not a blank entry.
+   */
+  const deleteText = useCallback(async () => {
+    if (!entry?.text) return;
+    const snapshot: DiaryText = entry.text;
+    setMenuOpen(false);
+
+    await saveText(entry.id, null);
+    haptics.trigger('diaryEntryDeleted', `text:${entry.id}`);
+
+    showSnackbar('Текст удалён', UNDO_WINDOW_MS, {
+      label: 'Вернуть',
+      onAction: () => {
+        void saveText(entry.id, snapshot).then(() => {
+          haptics.trigger('undoDelete', `text:${entry.id}`);
+        });
+      },
+    });
+  }, [entry, saveText, haptics, showSnackbar]);
 
   const confirmDelete = useCallback(async () => {
     if (!entry) return;
@@ -195,6 +252,35 @@ export const DiaryEntryPage = ({ entryId }: DiaryEntryPageProps) => {
 
         {/* Quick has no aspects, so it never shows an empty table. */}
         {entry.mode === 'deep' ? <RatingBreakdown aspects={entry.aspects} defaultOpen /> : null}
+
+        {entry.hasText && entry.text ? (
+          <div className={styles.text} data-testid="entry-text">
+            {entry.text.spoiler && !textRevealed ? (
+              <button
+                type="button"
+                className={styles.spoilerCover}
+                onClick={() => setTextRevealed(true)}
+                data-testid="entry-text-reveal"
+              >
+                В тексте есть спойлеры. Показать
+              </button>
+            ) : (
+              /* Plain text, exactly as written — never HTML, never markdown. */
+              <p className={styles.textBody} data-testid="entry-text-body">
+                {selectedText(entry.text)}
+              </p>
+            )}
+          </div>
+        ) : (
+          <Button
+            variant="secondary"
+            block
+            onClick={() => void write()}
+            data-testid="entry-write"
+          >
+            Написать о фильме
+          </Button>
+        )}
       </div>
 
       <DraftConflictSheet
@@ -208,11 +294,41 @@ export const DiaryEntryPage = ({ entryId }: DiaryEntryPageProps) => {
         onDiscard={editAfterConfirm}
       />
 
+      {/* Starting a text over unfinished work asks the very same question. */}
+      <DraftConflictSheet
+        open={textConflict && activeDraft !== null}
+        draft={activeDraft}
+        onClose={() => setTextConflict(false)}
+        onContinue={() => {
+          setTextConflict(false);
+          if (activeDraft) openDraft(activeDraft);
+        }}
+        onDiscard={writeAfterConfirm}
+      />
+
       <Sheet open={menuOpen} title="Запись" onClose={() => setMenuOpen(false)}>
         <div className={styles.menu}>
           <Button variant="secondary" block onClick={() => void edit()} data-testid="entry-edit">
             Изменить оценку
           </Button>
+          <Button
+            variant="secondary"
+            block
+            onClick={() => void write()}
+            data-testid="entry-edit-text"
+          >
+            {entry.hasText ? 'Изменить текст' : 'Написать о фильме'}
+          </Button>
+          {entry.hasText ? (
+            <Button
+              variant="secondary"
+              block
+              onClick={() => void deleteText()}
+              data-testid="entry-delete-text"
+            >
+              Удалить текст
+            </Button>
+          ) : null}
           <Button
             variant="secondary"
             block

@@ -17,6 +17,7 @@ import { RatingModePage } from '@features/rating/screens/RatingModePage';
 import { QuickRatingPage } from '@features/rating/screens/QuickRatingPage';
 import { DeepRatingPage } from '@features/rating/screens/DeepRatingPage';
 import { RatingResultPage } from '@features/rating/screens/RatingResultPage';
+import { WritingPage } from '@features/writing/screens/WritingPage';
 import styles from './AppShell.module.css';
 
 const RootScreen = ({ tab }: { tab: RootTab }) => {
@@ -44,6 +45,8 @@ const OverlayScreen = ({ route }: { route: Route }) => {
       return <DeepRatingPage filmId={route.filmId} step={route.step} />;
     case 'rateResult':
       return <RatingResultPage filmId={route.filmId} />;
+    case 'write':
+      return <WritingPage entryId={route.entryId} screen={route.screen} />;
     case 'diaryEntry':
       return <DiaryEntryPage entryId={route.entryId} />;
     case 'root':

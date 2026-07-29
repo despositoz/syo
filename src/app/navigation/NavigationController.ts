@@ -3,10 +3,12 @@ import type { TelegramController } from '../telegram/TelegramController';
 import { useNavigationStore } from './navigationStore';
 import {
   isRatingRoute,
+  isWritingRoute,
   type FilmRouteParams,
   type RatingRoute,
   type Route,
   type RootTab,
+  type WritingRoute,
 } from './navigationTypes';
 import type { HapticManager } from '@shared/haptics/HapticManager';
 
@@ -28,8 +30,8 @@ export class NavigationController {
   /** Stack to install once the pending history unwind reports back. */
   private pendingStack: Route[] | null = null;
   private backInterceptor: (() => boolean) | null = null;
-  /** Route to push once the pending unwind has landed. */
-  private pendingPush: Route | null = null;
+  /** Routes to push once the pending unwind has landed, in order. */
+  private pendingPush: Route[] = [];
 
   constructor(
     private readonly telegram: TelegramController,
@@ -99,6 +101,38 @@ export class NavigationController {
     this.pushRoute(route);
   }
 
+  /**
+   * Moves inside the writing flow. Like rating, `replace` keeps the whole flow
+   * on a single history entry: back leaves writing, it does not walk screen by
+   * screen through the editor the user just used.
+   */
+  openWriting(route: WritingRoute, replace = false): void {
+    this.telegram.requestFullscreenOnce();
+    if (replace && isWritingRoute(useNavigationStore.getState().current())) {
+      this.replaceTop(route);
+      return;
+    }
+    this.pushRoute(route);
+  }
+
+  /** Leaves writing and lands on the entry the text belongs to. */
+  closeWriting(entryId: string): void {
+    // The flow is over, so its own back handling is over with it.
+    this.backInterceptor = null;
+
+    const state = useNavigationStore.getState();
+    const below = state.stack[state.stack.length - 2];
+    if (below?.kind === 'diaryEntry' && below.entryId === entryId) {
+      this.goBack();
+      return;
+    }
+    if (isWritingRoute(state.current())) {
+      this.replaceTop({ kind: 'diaryEntry', entryId });
+      return;
+    }
+    this.pushRoute({ kind: 'diaryEntry', entryId });
+  }
+
   openDiaryEntry(entryId: string): void {
     this.pushRoute({ kind: 'diaryEntry', entryId });
   }
@@ -110,10 +144,11 @@ export class NavigationController {
    * stay underneath: back from the entry belongs in the Diary, not in a rating
    * step the user already completed.
    */
-  showSavedEntry(entryId: string): void {
+  showSavedEntry(entryId: string, andThen?: Route): void {
     const state = useNavigationStore.getState();
     const toDrop = state.stack.length - 1;
     const entry: Route = { kind: 'diaryEntry', entryId };
+    const routes = andThen ? [entry, andThen] : [entry];
 
     state.selectTab('diary');
     /*
@@ -122,11 +157,11 @@ export class NavigationController {
      * claiming a history entry that does not exist, and back would walk out of
      * the app entirely.
      */
-    this.pendingPush = entry;
+    this.pendingPush = routes;
     this.replaceHistory(routeToPath({ kind: 'root', tab: 'diary' }), toDrop);
     if (!this.pendingStack) {
-      this.pendingPush = null;
-      this.pushRoute(entry);
+      this.pendingPush = [];
+      for (const route of routes) this.pushRoute(route);
     }
   }
 
@@ -216,8 +251,8 @@ export class NavigationController {
       if (top) this.win.history.replaceState({ syo: this.historyDepth }, '', routeToPath(top));
 
       const push = this.pendingPush;
-      this.pendingPush = null;
-      if (push) this.pushRoute(push);
+      this.pendingPush = [];
+      for (const route of push) this.pushRoute(route);
       return;
     }
 

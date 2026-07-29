@@ -9,6 +9,7 @@ import { useThemeStore } from '@app/theme/themeStore';
 import { useSnackbarStore } from '@shared/ui/Snackbar/snackbarStore';
 import { clearFilmMemoryCache } from '@entities/film/film.cache';
 import { useRatingStore } from '@features/rating/model/rating.store';
+import { useWritingStore } from '@features/writing/model/writing.store';
 import { useDiaryStore } from '@features/diary/model/diary.store';
 import { db } from '@shared/storage/db';
 import type { TelegramWebApp } from '@app/telegram/telegramTypes';
@@ -222,6 +223,7 @@ export const resetAppState = async (): Promise<void> => {
   });
   useWatchlistStore.setState({ entries: {}, hydrated: false });
   useRatingStore.setState({ draft: null, hydrated: false, storageError: null });
+  useWritingStore.setState({ draft: null, hydrated: false, storageError: null, dirty: false });
   useDiaryStore.setState({ entries: [], hydrated: false, view: 'grid', highlightedId: null });
   useThemeStore.setState({ preference: 'cinema', colorScheme: 'dark', resolved: 'cinema' });
   useSnackbarStore.setState({ current: null });

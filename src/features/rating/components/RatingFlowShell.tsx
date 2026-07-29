@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTelegram } from '@app/telegram/telegramStore';
 import { useRatingStore } from '../model/rating.store';
+import { useWritingStore } from '@features/writing/model/writing.store';
 import { IconButton } from '@shared/ui/IconButton/IconButton';
 import { BackIcon, CloseIcon } from '@shared/ui/icons';
 import styles from './RatingFlowShell.module.css';
@@ -18,7 +19,7 @@ export interface RatingFlowShellProps {
 }
 
 /**
- * The frame every rating screen sits in (spec §5.1, §20.7).
+ * The frame every rating and writing screen sits in (spec §5.1, §20.7).
  *
  * Controls live inside the content-safe rect, so they never end up under the
  * Telegram close/menu cluster. In non-fullscreen Telegram owns the back
@@ -33,8 +34,14 @@ export const RatingFlowShell = ({
   accentRgb,
 }: RatingFlowShellProps) => {
   const chromeMode = useTelegram().chromeMode;
-  const storageError = useRatingStore((state) => state.storageError);
-  const retrySave = useRatingStore((state) => state.retrySave);
+  // One draft is active at a time, of either kind, so the shell reports
+  // whichever store failed to write it.
+  const ratingError = useRatingStore((state) => state.storageError);
+  const writingError = useWritingStore((state) => state.storageError);
+  const retryRating = useRatingStore((state) => state.retrySave);
+  const retryWriting = useWritingStore((state) => state.retrySave);
+  const storageError = ratingError ?? writingError;
+  const retrySave = ratingError ? retryRating : retryWriting;
   const ownBackButton = chromeMode === 'custom';
 
   return (
@@ -69,7 +76,7 @@ export const RatingFlowShell = ({
       */}
       {storageError ? (
         <div className={styles.storageError} role="alert" data-testid="rating-storage-error">
-          <span>Не получилось сохранить оценку на устройстве.</span>
+          <span>Не получилось сохранить на устройстве.</span>
           <button type="button" onClick={() => void retrySave()} data-testid="rating-storage-retry">
             Повторить
           </button>

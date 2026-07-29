@@ -9,6 +9,7 @@ import { ConnectivityController } from './connectivity/ConnectivityController';
 import { HapticManager, type HapticDriver } from '@shared/haptics/HapticManager';
 import { useWatchlistStore } from '@entities/watchlist/watchlist.store';
 import { useRatingStore } from '@features/rating/model/rating.store';
+import { useWritingStore } from '@features/writing/model/writing.store';
 import { useDiaryStore } from '@features/diary/model/diary.store';
 
 const createQueryClient = () =>
@@ -62,6 +63,9 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
     // The active draft and the diary are local data: they must be on screen
     // before any network call is even considered (spec §24, §21).
     void useRatingStore.getState().hydrate();
+    // The single slot holds a draft of either kind; both stores read it and
+    // each keeps only the kind it owns.
+    void useWritingStore.getState().hydrate();
     void useDiaryStore.getState().hydrate();
 
     /*
@@ -69,7 +73,10 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
      * wrote the synchronous mirror; this is the best-effort flush of whatever
      * IndexedDB write was still in flight (spec §20.10).
      */
-    const flush = () => void useRatingStore.getState().flush();
+    const flush = () => {
+      void useRatingStore.getState().flush();
+      void useWritingStore.getState().flush();
+    };
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flush();
     };

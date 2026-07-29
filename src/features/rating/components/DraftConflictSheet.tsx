@@ -1,11 +1,12 @@
-import type { RatingDraft } from '@domain/rating/rating.types';
+import type { ActiveDraft } from '@domain/writing/writing.types';
+import { draftFilmTitle } from '@features/drafts/draftCoordinator';
 import { Sheet } from '@shared/ui/Sheet/Sheet';
 import { Button } from '@shared/ui/Button/Button';
 import styles from './FlowSheets.module.css';
 
 export interface DraftConflictSheetProps {
   open: boolean;
-  draft: RatingDraft | null;
+  draft: ActiveDraft | null;
   /**
    * 'film' — another film is mid-rating.
    * 'mode' — this film is mid-rating in the other mode, so switching loses it.
@@ -37,11 +38,12 @@ export const DraftConflictSheet = ({
   if (!draft) return null;
 
   const byMode = reason === 'mode';
+  const filmTitle = draftFilmTitle(draft);
 
   return (
     <Sheet
       open={open}
-      title={byMode ? 'Оценка этого фильма уже начата' : `Ты не закончил «${draft.filmTitle}»`}
+      title={byMode ? 'Оценка этого фильма уже начата' : `Ты не закончил «${filmTitle}»`}
       onClose={onClose}
     >
       <p className={styles.text}>
@@ -52,7 +54,7 @@ export const DraftConflictSheet = ({
 
       <div className={styles.actions}>
         <Button variant="primary" block onClick={onContinue} data-testid="conflict-continue">
-          {byMode ? 'Продолжить начатое' : `Продолжить «${shortTitle(draft.filmTitle)}»`}
+          {byMode ? 'Продолжить начатое' : `Продолжить «${shortTitle(filmTitle)}»`}
         </Button>
         <Button variant="secondary" block onClick={onClose}>
           Остаться

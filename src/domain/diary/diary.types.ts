@@ -1,4 +1,5 @@
 import type { AspectScores, RatingMode, RatingValue } from '@domain/rating/rating.types';
+import type { DiaryText } from './diary.text';
 
 /**
  * A saved rating (spec §5).
@@ -22,8 +23,12 @@ export interface DiaryEntry {
   preciseRating: number;
   /** All five for deep; all null for quick. */
   aspects: AspectScores;
-  hasText: false;
-  text: null;
+  /**
+   * The written impression, added later and independently of the rating.
+   * `null` means the entry is rating-only — which every P0.2 entry is.
+   */
+  hasText: boolean;
+  text: DiaryText | null;
   /** When the film was watched. P0.2 uses the moment of rating. */
   watchedAt: string;
   createdAt: string;

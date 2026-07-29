@@ -1,4 +1,5 @@
 import { DEEP_STEP_COUNT } from '@domain/rating/rating.constants';
+import type { WritingScreen } from '@domain/writing/writing.types';
 import type { Route, RootTab } from './navigation/navigationTypes';
 
 export const ROOT_TABS: readonly RootTab[] = ['feed', 'diary', 'profile'] as const;
@@ -38,6 +39,8 @@ const relativePath = (route: Route): string => {
       return `/rate/${route.filmId}/deep/${route.step + 1}`;
     case 'rateResult':
       return `/rate/${route.filmId}/result`;
+    case 'write':
+      return `/write/${route.entryId}/${route.screen}`;
     case 'diaryEntry':
       return `/diary/${route.entryId}`;
   }
@@ -92,6 +95,20 @@ export const pathToStack = (pathname: string): Route[] => {
       }
     }
     return ratingStack(filmId, { kind: 'rateMode', filmId });
+  }
+
+  if (first === 'write' && second) {
+    // 'processing' exists only while a request is in the air, so a URL never
+    // resumes into it: the request it belonged to is long gone.
+    const screen: WritingScreen =
+      third === 'editor' || third === 'conversation' || third === 'aiResult' || third === 'preview'
+        ? third
+        : 'mode';
+    return [
+      diaryRoot,
+      { kind: 'diaryEntry', entryId: second },
+      { kind: 'write', entryId: second, screen },
+    ];
   }
 
   if (first === 'film') {

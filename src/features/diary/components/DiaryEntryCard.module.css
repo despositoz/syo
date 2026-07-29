@@ -124,3 +124,25 @@
   font-variant-numeric: tabular-nums;
   color: var(--color-text-tertiary);
 }
+
+/* Two or three lines at most: the card is a hint, not the entry. */
+.excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+.excerpt[data-spoiler='true'] {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.card[data-view='grid'] .excerpt {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}

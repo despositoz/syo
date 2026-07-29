@@ -1,9 +1,10 @@
 import { db, safeRead, strictWrite } from '@shared/storage/db';
 import { parseRatingDraft } from '@domain/rating/rating.validation';
-import type { RatingDraft } from '@domain/rating/rating.types';
+import { parseWritingDraft } from '@domain/writing/writing.validation';
+import type { ActiveDraft } from '@domain/writing/writing.types';
 
 /**
- * The active rating draft, stored twice on purpose (spec §12.5).
+ * The one active draft — rating or writing — stored twice on purpose.
  *
  *   Primary  — IndexedDB. Survives everything, but writes are asynchronous and
  *              a WebView killed mid-write loses the last one.
@@ -15,24 +16,31 @@ import type { RatingDraft } from '@domain/rating/rating.types';
 
 const MIRROR_KEY = 'syo:rating-draft:active';
 
-export interface RatingDraftRepository {
-  getActive(): Promise<RatingDraft | null>;
-  saveActive(draft: RatingDraft): Promise<void>;
+/**
+ * Reads whichever kind was stored. A writing draft is recognised by its `kind`
+ * discriminator; anything else is read as a rating draft.
+ */
+export const parseActiveDraft = (value: unknown): ActiveDraft | null =>
+  parseWritingDraft(value) ?? parseRatingDraft(value);
+
+export interface ActiveDraftRepository {
+  getActive(): Promise<ActiveDraft | null>;
+  saveActive(draft: ActiveDraft): Promise<void>;
   deleteActive(): Promise<void>;
   /** Best-effort write of whatever is pending, for pagehide/visibilitychange. */
   flush(): Promise<void>;
 }
 
-const readMirror = (storage: Storage | undefined): RatingDraft | null => {
+const readMirror = (storage: Storage | undefined): ActiveDraft | null => {
   try {
     const raw = storage?.getItem(MIRROR_KEY);
-    return raw ? parseRatingDraft(JSON.parse(raw)) : null;
+    return raw ? parseActiveDraft(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
 };
 
-const writeMirror = (storage: Storage | undefined, draft: RatingDraft | null): void => {
+const writeMirror = (storage: Storage | undefined, draft: ActiveDraft | null): void => {
   try {
     if (!draft) storage?.removeItem(MIRROR_KEY);
     else storage?.setItem(MIRROR_KEY, JSON.stringify(draft));
@@ -41,18 +49,19 @@ const writeMirror = (storage: Storage | undefined, draft: RatingDraft | null): v
   }
 };
 
-export class IndexedDbRatingDraftRepository implements RatingDraftRepository {
+export class IndexedDbActiveDraftRepository implements ActiveDraftRepository {
   /** Latest draft handed to saveActive, kept for flush(). */
-  private pending: RatingDraft | null = null;
+  private pending: ActiveDraft | null = null;
   private inFlight: Promise<void> = Promise.resolve();
 
   constructor(private readonly storage: Storage | undefined = globalThis.localStorage) {}
 
-  async getActive(): Promise<RatingDraft | null> {
+  async getActive(): Promise<ActiveDraft | null> {
     // The draft keeps its own id, so "the active one" is simply the only row.
     const rows = await safeRead(() => db.ratingDrafts.toArray(), []);
-    const stored = rows.find((row) => row.status === 'active') ?? rows[0];
-    const primary = stored ? parseRatingDraft(stored) : null;
+    // Only one row ever lives here, of either kind.
+    const stored = rows[0];
+    const primary = stored ? parseActiveDraft(stored) : null;
     const mirror = readMirror(this.storage);
 
     if (!primary) {
@@ -73,7 +82,7 @@ export class IndexedDbRatingDraftRepository implements RatingDraftRepository {
     return newest;
   }
 
-  async saveActive(draft: RatingDraft): Promise<void> {
+  async saveActive(draft: ActiveDraft): Promise<void> {
     this.pending = draft;
     // Synchronous first: this is the copy that survives a force close.
     writeMirror(this.storage, draft);
@@ -102,4 +111,4 @@ export class IndexedDbRatingDraftRepository implements RatingDraftRepository {
   }
 }
 
-export const ratingDraftRepository: RatingDraftRepository = new IndexedDbRatingDraftRepository();
+export const activeDraftRepository: ActiveDraftRepository = new IndexedDbActiveDraftRepository();

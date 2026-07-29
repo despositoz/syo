@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { Film, FilmSummary } from '@entities/film/film.model';
 import type { WatchlistEntry } from '@entities/watchlist/watchlist.model';
-import type { RatingDraft } from '@domain/rating/rating.types';
+import type { ActiveDraft } from '@domain/writing/writing.types';
 import type { DiaryEntry } from '@domain/diary/diary.types';
 
 export interface FilmCacheRow {
@@ -56,7 +56,13 @@ export class SyoDatabase extends Dexie {
   preferences!: Table<PreferenceRow, string>;
   syncQueue!: Table<SyncQueueRow, number>;
   /** At most one row with status 'active' — the single in-flight draft. */
-  ratingDrafts!: Table<RatingDraft, string>;
+  /**
+   * The single active draft — a rating one or a writing one (spec §6.4,
+   * variant A). The physical store keeps its v2 name: renaming it would mean
+   * moving live data for no behavioural gain, and moving a draft is exactly
+   * the operation with the worst downside.
+   */
+  ratingDrafts!: Table<ActiveDraft, string>;
   diaryEntries!: Table<DiaryEntry, string>;
 
   constructor(name = 'syo') {
@@ -103,6 +109,24 @@ export class SyoDatabase extends Dexie {
         if (!legacy.length) return;
         const migrated = legacy.map(migrateLegacyEntry).filter((row): row is DiaryEntry => !!row);
         await tx.table('diaryEntries').bulkPut(migrated);
+      });
+
+    /*
+     * v4 makes room for the written impression. No index changes: entries
+     * saved before P0.3 simply gain `hasText: false` and `text: null`, which is
+     * what "rating only" means. Re-running finds nothing left to backfill, so
+     * the upgrade is idempotent.
+     */
+    this.version(4)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('diaryEntries')
+          .toCollection()
+          .modify((row: Record<string, unknown>) => {
+            if (row.text === undefined) row.text = null;
+            row.hasText = row.text !== null;
+          });
       });
   }
 }

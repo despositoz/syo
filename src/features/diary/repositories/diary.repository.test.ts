@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@shared/storage/db';
 import { IndexedDbDiaryRepository, IndexedDbSyncQueueRepository } from './diary.repository';
-import { IndexedDbRatingDraftRepository } from '@features/rating/repositories/ratingDraft.repository';
+import { IndexedDbActiveDraftRepository } from '@features/drafts/activeDraft.repository';
 import { createDraft, setAspectRating } from '@domain/rating/rating.machine';
 import { emptyAspects } from '@domain/rating/rating.types';
 import type { DiaryEntry } from '@domain/diary/diary.types';
 import type { RatingFilmSummary } from '@domain/rating/rating.machine';
+import type { RatingDraft } from '@domain/rating/rating.types';
+import { isRatingDraft } from '@domain/writing/writing.types';
+
+/** The stored draft is a union; these cases always store a rating one. */
+const asRating = (draft: unknown): RatingDraft | null =>
+  isRatingDraft(draft as never) ? (draft as RatingDraft) : null;
 
 const film: RatingFilmSummary = {
   filmId: 7,
@@ -199,18 +205,18 @@ describe('sync queue', () => {
 
 describe('rating draft repository', () => {
   it('round-trips a draft', async () => {
-    const repository = new IndexedDbRatingDraftRepository(new MemoryStorage());
+    const repository = new IndexedDbActiveDraftRepository(new MemoryStorage());
     const draft = setAspectRating(createDraft({ film, mode: 'deep' }), 'story', 3);
 
     await repository.saveActive(draft);
-    const restored = await repository.getActive();
+    const restored = asRating(await repository.getActive());
     expect(restored?.aspects.story).toBe(3);
     expect(restored?.id).toBe(draft.id);
   });
 
   it('prefers the newest revision when the mirror is ahead', async () => {
     const storage = new MemoryStorage();
-    const repository = new IndexedDbRatingDraftRepository(storage);
+    const repository = new IndexedDbActiveDraftRepository(storage);
 
     const older = setAspectRating(createDraft({ film, mode: 'deep' }), 'story', 1);
     await repository.saveActive(older);
@@ -219,12 +225,12 @@ describe('rating draft repository', () => {
     const newer = { ...setAspectRating(older, 'story', 5), revision: older.revision + 5 };
     storage.setItem('syo:rating-draft:active', JSON.stringify(newer));
 
-    expect((await repository.getActive())?.aspects.story).toBe(5);
+    expect(asRating(await repository.getActive())?.aspects.story).toBe(5);
   });
 
   it('breaks a revision tie with updatedAt', async () => {
     const storage = new MemoryStorage();
-    const repository = new IndexedDbRatingDraftRepository(storage);
+    const repository = new IndexedDbActiveDraftRepository(storage);
 
     const stored = setAspectRating(createDraft({ film, mode: 'deep' }), 'story', 2);
     await repository.saveActive(stored);
@@ -236,7 +242,7 @@ describe('rating draft repository', () => {
     };
     storage.setItem('syo:rating-draft:active', JSON.stringify(sameRevisionButLater));
 
-    expect((await repository.getActive())?.aspects.story).toBe(5);
+    expect(asRating(await repository.getActive())?.aspects.story).toBe(5);
   });
 
   it('recovers a draft that only the mirror has', async () => {
@@ -244,8 +250,8 @@ describe('rating draft repository', () => {
     const draft = setAspectRating(createDraft({ film, mode: 'deep' }), 'story', 2);
     storage.setItem('syo:rating-draft:active', JSON.stringify(draft));
 
-    const repository = new IndexedDbRatingDraftRepository(storage);
-    expect((await repository.getActive())?.aspects.story).toBe(2);
+    const repository = new IndexedDbActiveDraftRepository(storage);
+    expect(asRating(await repository.getActive())?.aspects.story).toBe(2);
   });
 
   it('salvages a corrupted draft instead of losing the film', async () => {
@@ -257,8 +263,8 @@ describe('rating draft repository', () => {
       JSON.stringify({ ...draft, mode: 'nonsense', aspects: { ...draft.aspects, story: 9 } }),
     );
 
-    const repository = new IndexedDbRatingDraftRepository(storage);
-    const restored = await repository.getActive();
+    const repository = new IndexedDbActiveDraftRepository(storage);
+    const restored = asRating(await repository.getActive());
     expect(restored?.filmId).toBe(7);
     expect(restored?.mode).toBeNull();
     expect(restored?.aspects.story).toBeNull();
@@ -267,13 +273,13 @@ describe('rating draft repository', () => {
   it('ignores an unparseable mirror instead of crashing the flow', async () => {
     const storage = new MemoryStorage();
     storage.setItem('syo:rating-draft:active', '{not json');
-    const repository = new IndexedDbRatingDraftRepository(storage);
+    const repository = new IndexedDbActiveDraftRepository(storage);
     expect(await repository.getActive()).toBeNull();
   });
 
   it('clears both layers on delete', async () => {
     const storage = new MemoryStorage();
-    const repository = new IndexedDbRatingDraftRepository(storage);
+    const repository = new IndexedDbActiveDraftRepository(storage);
     await repository.saveActive(createDraft({ film, mode: 'quick' }));
 
     await repository.deleteActive();
@@ -316,5 +322,97 @@ describe('schema migration', () => {
     await db.open();
 
     expect(await db.watchlist.get(1)).toMatchObject({ title: 'Старый фильм' });
+  });
+});
+
+describe('entry text', () => {
+  const revision = (id: string, text: string) => ({
+    id,
+    parentRevisionId: null,
+    kind: 'user' as const,
+    origin: 'manual' as const,
+    text,
+    changeSummary: null,
+    createdAt: '2026-07-10T12:00:00.000Z',
+    promptVersion: null,
+    requestId: null,
+  });
+
+  const text = (value = 'Мой текст о фильме') => ({
+    selectedRevisionId: 'rev-1',
+    revisions: [revision('rev-1', value)],
+    conversation: null,
+    spoiler: false,
+  });
+
+  it('saves text onto an existing entry without touching the rating', async () => {
+    const repository = new IndexedDbDiaryRepository();
+    await repository.upsert(entry({ mode: 'quick', overallRating: 4, preciseRating: 4 }));
+
+    const stored = await repository.saveText('entry-1', text());
+
+    expect(stored?.hasText).toBe(true);
+    expect(stored?.text?.revisions[0]?.text).toBe('Мой текст о фильме');
+    // The rating is exactly what it was.
+    expect(stored?.overallRating).toBe(4);
+    expect(stored?.mode).toBe('quick');
+  });
+
+  it('removes the text and leaves the entry in place', async () => {
+    const repository = new IndexedDbDiaryRepository();
+    await repository.upsert(entry());
+    await repository.saveText('entry-1', text());
+
+    const cleared = await repository.saveText('entry-1', null);
+
+    expect(cleared?.hasText).toBe(false);
+    expect(cleared?.text).toBeNull();
+    expect(await repository.listActive()).toHaveLength(1);
+  });
+
+  it('restores a removed text exactly as it was', async () => {
+    const repository = new IndexedDbDiaryRepository();
+    await repository.upsert(entry());
+    const saved = await repository.saveText('entry-1', text('Слова, которые жаль потерять'));
+    const snapshot = saved!.text!;
+
+    await repository.saveText('entry-1', null);
+    const restored = await repository.saveText('entry-1', snapshot);
+
+    expect(restored?.text?.revisions[0]?.text).toBe('Слова, которые жаль потерять');
+  });
+
+  it('queues the change in the same transaction as the text', async () => {
+    const repository = new IndexedDbDiaryRepository();
+    const queue = new IndexedDbSyncQueueRepository();
+    await repository.upsert(entry());
+    await db.syncQueue.clear();
+
+    const stored = await repository.saveText('entry-1', text());
+    const pending = await queue.listPending();
+
+    expect(pending).toHaveLength(1);
+    expect(pending[0]?.task).toMatchObject({
+      type: 'diaryUpsert',
+      entryId: 'entry-1',
+      revision: stored?.revision,
+    });
+  });
+
+  it('rejects text whose selected revision does not exist', async () => {
+    const repository = new IndexedDbDiaryRepository();
+    await repository.upsert(entry());
+
+    await expect(
+      repository.saveText('entry-1', { ...text(), selectedRevisionId: 'ghost' }),
+    ).rejects.toThrow();
+  });
+
+  it('reports a deleted entry rather than resurrecting it', async () => {
+    const repository = new IndexedDbDiaryRepository();
+    await repository.upsert(entry());
+    await repository.softDelete('entry-1');
+
+    expect(await repository.saveText('entry-1', text())).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ import { MODE_LABELS, MODE_QUESTION } from '@domain/rating/rating.constants';
 import { resumeTarget, type RatingFilmSummary } from '@domain/rating/rating.machine';
 import type { RatingDraft, RatingMode } from '@domain/rating/rating.types';
 import { useRatingStore, draftMatchesFilm, filmSummaryFrom } from '../model/rating.store';
-import { replaceDraft, requestDraft } from '../model/draftCoordinator';
+import { replaceDraft, requestDraft } from '@features/drafts/draftCoordinator';
 import { useDiaryStore } from '@features/diary/model/diary.store';
 import type { DiaryEntry } from '@domain/diary/diary.types';
 import { RatingFlowShell } from '../components/RatingFlowShell';

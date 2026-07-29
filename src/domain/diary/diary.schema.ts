@@ -21,8 +21,13 @@ export const assertValidEntry = (entry: DiaryEntry): void => {
   if (entry.overallRating < 1 || entry.overallRating > 5) {
     throw new DiaryValidationError('overallRating must be 1-5');
   }
-  if (entry.hasText !== false || entry.text !== null) {
-    throw new DiaryValidationError('P0.2 entries carry no text');
+  // hasText and text must agree: a flag without content (or the reverse) would
+  // make the card and the entry disagree about what exists.
+  if (entry.hasText !== (entry.text !== null)) {
+    throw new DiaryValidationError('hasText must match the presence of text');
+  }
+  if (entry.text && !entry.text.revisions.some((r) => r.id === entry.text!.selectedRevisionId)) {
+    throw new DiaryValidationError('selectedRevisionId must point at a stored revision');
   }
   if (entry.mode === 'quick') {
     const anyAspect = Object.values(entry.aspects).some((value) => value !== null);

@@ -4,6 +4,7 @@ import { createId } from '@domain/rating/rating.validation';
 import { emptyAspects, type RatingDraft } from '@domain/rating/rating.types';
 import { sortForDiary } from '@domain/diary/diary.schema';
 import type { DiaryEntry } from '@domain/diary/diary.types';
+import type { DiaryText } from '@domain/diary/diary.text';
 import { readPreference, writePreference } from '@shared/storage/db';
 import { diaryRepository, type DiaryRepository } from '../repositories/diary.repository';
 
@@ -26,6 +27,8 @@ export interface DiaryState {
   hydrate: () => Promise<void>;
   setView: (view: DiaryView) => Promise<void>;
   saveFromDraft: (draft: RatingDraft) => Promise<DiaryEntry>;
+  /** Writes only the text of an entry; `null` removes it. */
+  saveText: (entryId: string, text: DiaryText | null) => Promise<DiaryEntry | null>;
   remove: (id: string) => Promise<void>;
   restore: (id: string) => Promise<void>;
   clearHighlight: () => void;
@@ -109,6 +112,15 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
     const stored = await repository.upsert(entryFromDraft(draft, existing));
     set({ entries: sortForDiary(await repository.listActive()), highlightedId: stored.id });
+    return stored;
+  },
+
+  saveText: async (entryId, text) => {
+    const stored = await repository.saveText(entryId, text);
+    set({
+      entries: sortForDiary(await repository.listActive()),
+      ...(stored ? { highlightedId: stored.id } : {}),
+    });
     return stored;
   },
 

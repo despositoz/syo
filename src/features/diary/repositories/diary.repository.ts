@@ -1,6 +1,8 @@
 import { db, safeRead, strictWrite } from '@shared/storage/db';
 import type { SyncTask } from '@shared/storage/db';
 import { assertValidEntry, sortForDiary } from '@domain/diary/diary.schema';
+import type { DiaryText } from '@domain/diary/diary.text';
+import { createId } from '@domain/rating/rating.validation';
 import { isActiveEntry, type DiaryEntry } from '@domain/diary/diary.types';
 
 /**
@@ -17,6 +19,12 @@ export interface DiaryRepository {
   /** The one active (non-deleted) entry for a film, if it exists. */
   getByFilmId(filmId: number): Promise<DiaryEntry | null>;
   upsert(entry: DiaryEntry): Promise<DiaryEntry>;
+  /**
+   * Writes only the text of an entry. `null` removes it. The rating fields are
+   * never read from the caller, so a stale copy of an entry cannot roll a
+   * rating back while saving a paragraph (spec §8.2).
+   */
+  saveText(entryId: string, text: DiaryText | null): Promise<DiaryEntry | null>;
   softDelete(id: string): Promise<DiaryEntry | null>;
   restore(id: string): Promise<DiaryEntry | null>;
   finalizeDelete(id: string): Promise<void>;
@@ -143,6 +151,43 @@ export class IndexedDbDiaryRepository implements DiaryRepository {
     );
 
     this.emit();
+    return stored;
+  }
+
+  /**
+   * The text is written inside the transaction that reads the entry, so a
+   * rating saved from another screen in between is never overwritten: only the
+   * text fields move.
+   */
+  async saveText(entryId: string, text: DiaryText | null): Promise<DiaryEntry | null> {
+    const stored = await strictWrite(async () =>
+      db.transaction('rw', db.diaryEntries, db.syncQueue, async () => {
+        const existing = await db.diaryEntries.get(entryId);
+        if (!existing || !isActiveEntry(existing)) return null;
+
+        const next: DiaryEntry = {
+          ...existing,
+          hasText: text !== null,
+          text,
+          updatedAt: new Date().toISOString(),
+          clientMutationId: createId(),
+          revision: existing.revision + 1,
+          syncStatus: 'local',
+        };
+        assertValidEntry(next);
+
+        await db.diaryEntries.put(next);
+        await enqueueWithin({
+          type: 'diaryUpsert',
+          entryId: next.id,
+          clientMutationId: next.clientMutationId,
+          revision: next.revision,
+        });
+        return next;
+      }),
+    );
+
+    if (stored) this.emit();
     return stored;
   }
 

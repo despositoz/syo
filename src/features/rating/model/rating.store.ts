@@ -16,11 +16,12 @@ import type {
   RatingValue,
 } from '@domain/rating/rating.types';
 import { flowStateOf } from '@domain/rating/rating.machine';
+import { isRatingDraft } from '@domain/writing/writing.types';
 import { StorageError } from '@shared/storage/db';
 import {
-  ratingDraftRepository,
-  type RatingDraftRepository,
-} from '@features/rating/repositories/ratingDraft.repository';
+  activeDraftRepository,
+  type ActiveDraftRepository,
+} from '@features/drafts/activeDraft.repository';
 
 /**
  * The single active rating draft (spec §7).
@@ -50,10 +51,10 @@ export interface RatingState {
   clearStorageError: () => void;
 }
 
-let repository: RatingDraftRepository = ratingDraftRepository;
+let repository: ActiveDraftRepository = activeDraftRepository;
 
 /** Test seam. */
-export const setRatingDraftRepository = (next: RatingDraftRepository): void => {
+export const setActiveDraftRepository = (next: ActiveDraftRepository): void => {
   repository = next;
 };
 
@@ -84,8 +85,9 @@ export const useRatingStore = create<RatingState>((set, get) => {
     storageError: null,
 
     hydrate: async () => {
-      const draft = await repository.getActive().catch(() => null);
-      set({ draft, hydrated: true });
+      const stored = await repository.getActive().catch(() => null);
+      // A writing draft belongs to the writing store; this one only owns ratings.
+      set({ draft: isRatingDraft(stored) ? stored : null, hydrated: true });
     },
 
     start: async (options) => {
