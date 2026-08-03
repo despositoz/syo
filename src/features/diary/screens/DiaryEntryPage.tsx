@@ -53,9 +53,7 @@ export const DiaryEntryPage = ({ entryId }: DiaryEntryPageProps) => {
   const saveText = useDiaryStore((state) => state.saveText);
   const activeDraft = useActiveDraft();
 
-  const [entry, setEntry] = useState<DiaryEntry | null>(
-    () => entries.find((item) => item.id === entryId) ?? null,
-  );
+  const [stored, setStored] = useState<DiaryEntry | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [conflictMode, setConflictMode] = useState<RatingMode | null>(null);
@@ -63,22 +61,22 @@ export const DiaryEntryPage = ({ entryId }: DiaryEntryPageProps) => {
   const [textConflict, setTextConflict] = useState(false);
   const [textRevealed, setTextRevealed] = useState(false);
 
+  const fromStore = entries.find((item) => item.id === entryId) ?? null;
+  // The store wins while it has the entry; `stored` only covers a deep link.
+  const entry = fromStore ?? stored;
+
   useEffect(() => {
-    const found = entries.find((item) => item.id === entryId);
-    if (found) {
-      setEntry(found);
-      return;
-    }
+    if (fromStore) return;
     // Deep link or a cold start: read it straight from storage.
     let active = true;
-    void diaryRepository.getById(entryId).then((stored) => {
+    void diaryRepository.getById(entryId).then((found) => {
       // A soft-deleted entry must not be reachable by URL.
-      if (active && stored && !stored.deletedAt) setEntry(stored);
+      if (active && found && !found.deletedAt) setStored(found);
     });
     return () => {
       active = false;
     };
-  }, [entries, entryId]);
+  }, [fromStore, entryId]);
 
   const openDraft = useCallback(
     (draft: Parameters<typeof openDraftRoute>[1]) => openDraftRoute(navigation, draft),

@@ -57,14 +57,16 @@ export const Poster = ({
     };
   }, []);
 
-  useEffect(() => {
-    if (!posterPath) {
-      setStage('fallback');
-      return;
-    }
-    // An already-decoded URL must not flash through the preview stage again.
-    setStage(imagePipeline.isDecoded(fullUrl) ? 'full' : 'color');
-  }, [posterPath, fullUrl]);
+  /*
+   * A new film means a new stage. Adjusted during render rather than in an
+   * effect: an effect would paint one frame of the previous poster's stage
+   * first, and an already-decoded URL must not flash through 'color' again.
+   */
+  const [shownUrl, setShownUrl] = useState(fullUrl);
+  if (shownUrl !== fullUrl) {
+    setShownUrl(fullUrl);
+    setStage(!posterPath ? 'fallback' : imagePipeline.isDecoded(fullUrl) ? 'full' : 'color');
+  }
 
   // Intrinsic attributes only: they give the browser the ratio before the
   // bytes arrive. CSS never reads them.

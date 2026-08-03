@@ -59,10 +59,16 @@ export const RatingModePage = ({ filmId }: RatingModePageProps) => {
     };
   }, [filmId]);
 
-  /* A film that is already rated asks what to do instead of duplicating. */
-  useEffect(() => {
-    if (existingEntry && !draftMatchesFilm(draft, filmId)) setDuplicateOpen(true);
-  }, [existingEntry, draft, filmId]);
+  /*
+   * A film that is already rated asks what to do instead of duplicating.
+   * Adjusted during render, keyed on the entry: an effect would open the sheet
+   * one frame late, and re-opening it after the user closed it would be worse.
+   */
+  const [askedAbout, setAskedAbout] = useState<string | null>(null);
+  if (existingEntry && !draftMatchesFilm(draft, filmId) && askedAbout !== existingEntry.id) {
+    setAskedAbout(existingEntry.id);
+    setDuplicateOpen(true);
+  }
 
   const optionsFor = useCallback(
     (mode: RatingMode) => ({

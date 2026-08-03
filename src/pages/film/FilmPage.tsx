@@ -48,9 +48,17 @@ const useFilmData = (filmId: number) => {
   const [cached, setCached] = useState<Film | null>(null);
   const [cacheRead, setCacheRead] = useState(false);
 
+  // A different film starts from "nothing read yet", adjusted during render so
+  // the previous film's cache is never shown as this one's.
+  const [readFor, setReadFor] = useState(filmId);
+  if (readFor !== filmId) {
+    setReadFor(filmId);
+    setCacheRead(false);
+    setCached(null);
+  }
+
   useEffect(() => {
     let active = true;
-    setCacheRead(false);
     void filmRepository.getCached(filmId).then((film) => {
       if (!active) return;
       setCached(film);

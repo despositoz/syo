@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationController } from './navigation/NavigationController';
 import { getTelegramController } from './telegram/telegramStore';
@@ -32,8 +32,10 @@ const createQueryClient = () =>
   });
 
 export const AppProviders = ({ children }: { children: ReactNode }) => {
-  const queryClient = useRef<QueryClient>(null);
-  queryClient.current ??= createQueryClient();
+  // Created once for the life of the provider. A lazy useState initialiser is
+  // the supported way to own an object like this: a ref read during render is
+  // not, and React Compiler flags it.
+  const [queryClient] = useState(createQueryClient);
 
   const services = useMemo<AppServices>(() => {
     const telegram = getTelegramController();
@@ -94,7 +96,7 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
   }, [services]);
 
   return (
-    <QueryClientProvider client={queryClient.current}>
+    <QueryClientProvider client={queryClient}>
       <AppServicesContext.Provider value={services}>
         <ThemeProvider>{children}</ThemeProvider>
       </AppServicesContext.Provider>

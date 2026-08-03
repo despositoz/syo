@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   createTelegramFake,
@@ -124,7 +124,11 @@ describe('writing a text without any assistant', () => {
 
     await user.click(await screen.findByTestId('writing-mode-free'));
     await user.type(await screen.findByTestId('writing-textarea'), 'Незаконченная мысль');
-    await useWritingStore.getState().flush();
+    // The debounced autosave lands inside act(), not as a stray update after
+    // the component is gone.
+    await act(async () => {
+      await useWritingStore.getState().flush();
+    });
     first.unmount();
 
     // A cold start reads the draft back from storage, not from memory.

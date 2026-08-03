@@ -43,7 +43,9 @@ export const ImageStage = ({
 }: ImageStageProps) => {
   const [status, setStatus] = useState<ImageStageStatus>(path ? 'color' : 'failed');
   const notify = useRef(onStatusChange);
-  notify.current = onStatusChange;
+  useEffect(() => {
+    notify.current = onStatusChange;
+  }, [onStatusChange]);
 
   const previewUrl = useMemo(() => (path ? imagePipeline.preview(path, kind) : ''), [path, kind]);
   const fullUrl = useMemo(
@@ -51,15 +53,15 @@ export const ImageStage = ({
     [path, kind, width],
   );
 
-  useEffect(() => {
-    const next: ImageStageStatus = !path
-      ? 'failed'
-      : imagePipeline.isDecoded(fullUrl)
-        ? 'full'
-        : 'color';
-    setStatus(next);
-    notify.current?.(next);
-  }, [path, fullUrl]);
+  /*
+   * A new image means a new status, adjusted during render: an effect would
+   * show one frame of the previous image's status before correcting itself.
+   */
+  const [shownUrl, setShownUrl] = useState(fullUrl);
+  if (shownUrl !== fullUrl) {
+    setShownUrl(fullUrl);
+    setStatus(!path ? 'failed' : imagePipeline.isDecoded(fullUrl) ? 'full' : 'color');
+  }
 
   const update = (next: ImageStageStatus) => {
     setStatus((current) => {

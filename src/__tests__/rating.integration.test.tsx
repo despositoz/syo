@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   createTelegramFake,
@@ -104,7 +104,11 @@ describe('Flow 2 — deep rating and rounding', () => {
       await waitFor(() => expect(screen.queryAllByRole('radio').length).toBeGreaterThan(0), {
         timeout: 2000,
       });
-      await new Promise((resolve) => setTimeout(resolve, 420));
+      // The flow advances on its own timer; waiting inside act() keeps that
+      // update part of the test's own work instead of a stray warning.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 420));
+      });
     }
 
     await user.click(await screen.findByTestId('result-save'));
@@ -187,6 +191,9 @@ describe('Flow 4/5 — only one active draft', () => {
     // The new film's draft replaces it — and there is still exactly one.
     await waitFor(() => expect(useRatingStore.getState().draft?.filmId).toBe(FILM_ID));
     expect(await db.ratingDrafts.count()).toBe(1);
+    // Discarding always continues into the action that was asked for, so the
+    // test waits for the flow to land rather than ending mid-navigation.
+    await screen.findByTestId('star-rating');
   });
 });
 
