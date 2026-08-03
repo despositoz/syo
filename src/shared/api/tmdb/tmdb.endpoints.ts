@@ -31,6 +31,39 @@ export const tmdbEndpoints = {
     },
   }),
 
+  /**
+   * Candidates for the personal feed (P0.4 §13.2). Components never call
+   * TMDB — these descriptors are the only place a feed request is spelled out.
+   */
+  recommendations: (filmId: number): { path: string; options: TmdbRequestOptions } => ({
+    path: `/movie/${filmId}/recommendations`,
+    options: { query: { page: 1 } },
+  }),
+
+  similar: (filmId: number): { path: string; options: TmdbRequestOptions } => ({
+    path: `/movie/${filmId}/similar`,
+    options: { query: { page: 1 } },
+  }),
+
+  /** Genre discovery, ordered by popularity with a quality floor. */
+  discover: (options: {
+    genreIds?: number[];
+    personId?: number;
+    minVotes?: number;
+  }): { path: string; options: TmdbRequestOptions } => ({
+    path: '/discover/movie',
+    options: {
+      query: {
+        page: 1,
+        include_adult: false,
+        sort_by: 'popularity.desc',
+        'vote_count.gte': options.minVotes ?? 200,
+        ...(options.genreIds?.length ? { with_genres: options.genreIds.join(',') } : {}),
+        ...(options.personId ? { with_cast: options.personId } : {}),
+      },
+    },
+  }),
+
   genres: (): { path: string; options: TmdbRequestOptions } => ({
     path: '/genre/movie/list',
     options: {},
