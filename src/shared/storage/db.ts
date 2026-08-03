@@ -10,10 +10,50 @@ export interface FilmCacheRow {
   cachedAt: number;
 }
 
+/**
+ * The feed cache row.
+ *
+ * `items` is the P0.1–P0.3 shape (a bare list of films); `snapshot` is the
+ * P0.4 one. Both may be present on a row written by an older build, and the
+ * reader prefers the snapshot — that is what makes the upgrade invisible
+ * rather than a blank screen (P0.4 §36.3).
+ */
 export interface FeedCacheRow {
   key: string;
-  items: FilmSummary[];
+  items?: FilmSummary[];
+  snapshot?: unknown;
   cachedAt: number;
+}
+
+/** One row per feedback action the user took in the feed (P0.4 §16). */
+export interface FeedFeedbackRow {
+  id: string;
+  itemId: string;
+  filmId: number | null;
+  observationCode: string | null;
+  action: string;
+  contextId: string | null;
+  createdAt: string;
+  expiresAt: string | null;
+}
+
+/** How often an item was actually on screen, and what happened to it. */
+export interface FeedImpressionRow {
+  itemId: string;
+  firstShownAt: string;
+  lastShownAt: string;
+  showCount: number;
+  openedAt: string | null;
+  action: string | null;
+}
+
+/** Where the feed was when the user left it (P0.4 §22). */
+export interface FeedPositionRow {
+  key: string;
+  anchorItemId: string | null;
+  anchorOffset: number;
+  scrollTopFallback: number;
+  updatedAt: number;
 }
 
 export interface PresentationCacheRow {
@@ -64,6 +104,9 @@ export class SyoDatabase extends Dexie {
    */
   ratingDrafts!: Table<ActiveDraft, string>;
   diaryEntries!: Table<DiaryEntry, string>;
+  feedFeedback!: Table<FeedFeedbackRow, string>;
+  feedImpressions!: Table<FeedImpressionRow, string>;
+  feedPosition!: Table<FeedPositionRow, string>;
 
   constructor(name = 'syo') {
     super(name);
@@ -128,6 +171,18 @@ export class SyoDatabase extends Dexie {
             row.hasText = row.text !== null;
           });
       });
+
+    /*
+     * v5 adds the personal feed's own stores. The feed cache itself is *not*
+     * touched: the legacy `items` array stays exactly where it is and is
+     * converted to discovery items on read, so an upgrade never costs the user
+     * their first paint (P0.4 §36).
+     */
+    this.version(5).stores({
+      feedFeedback: 'id, itemId, filmId, action, createdAt',
+      feedImpressions: 'itemId, lastShownAt',
+      feedPosition: 'key',
+    });
   }
 }
 

@@ -289,11 +289,13 @@ describe('rating draft repository', () => {
 });
 
 describe('schema migration', () => {
-  it('opens at v3 with the new stores and keeps the old ones', async () => {
+  it('keeps every earlier store while new versions add their own', async () => {
     await db.open();
-    const names = db.tables.map((table) => table.name).sort();
+    const names = db.tables.map((table) => table.name);
+
+    // The point is that nothing was dropped along the way; later stages add.
     expect(names).toEqual(
-      [
+      expect.arrayContaining([
         'diaryEntries',
         'feed',
         'films',
@@ -302,7 +304,7 @@ describe('schema migration', () => {
         'ratingDrafts',
         'syncQueue',
         'watchlist',
-      ].sort(),
+      ]),
     );
     expect(db.verno).toBeGreaterThanOrEqual(3);
   });
