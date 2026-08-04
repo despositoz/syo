@@ -32,6 +32,8 @@ export class NavigationController {
   private backInterceptor: (() => boolean) | null = null;
   /** Routes to push once the pending unwind has landed, in order. */
   private pendingPush: Route[] = [];
+  /** What a repeat tap on an already-active root tab does, per tab. */
+  private readonly tabInterceptors = new Map<RootTab, () => void>();
 
   constructor(
     private readonly telegram: TelegramController,
@@ -65,9 +67,25 @@ export class NavigationController {
 
   /* --- semantic actions --------------------------------------------- */
 
+  /**
+   * What a repeat tap on the *already active* tab does — scroll to top, then
+   * refresh (spec §22.7). The screen registers it here rather than in a click
+   * handler inside an icon, so the rule lives with the rest of navigation.
+   */
+  setActiveTabInterceptor(tab: RootTab, handler: () => void): () => void {
+    this.tabInterceptors.set(tab, handler);
+    return () => {
+      if (this.tabInterceptors.get(tab) === handler) this.tabInterceptors.delete(tab);
+    };
+  }
+
   selectTab(tab: RootTab): void {
     const state = useNavigationStore.getState();
-    if (state.stack.length === 1 && state.activeTab === tab) return;
+    if (state.stack.length === 1 && state.activeTab === tab) {
+      // Already here: the screen decides what a second tap means.
+      this.tabInterceptors.get(tab)?.();
+      return;
+    }
     this.haptics.trigger('tabSelection', tab);
     // Collapsing the stack must also unwind the history entries we pushed.
     const toDrop = state.stack.length - 1;

@@ -7,7 +7,7 @@ import { Snackbar } from '@shared/ui/Snackbar/Snackbar';
 import { SyncIndicator } from '@shared/ui/SyncIndicator/SyncIndicator';
 import { runPageTransition } from '@shared/motion/transitions';
 import { usePerformanceStore } from './performance/PerformanceController';
-import { FeedPage } from '@pages/feed/FeedPage';
+import { FeedPage } from '@features/feed/screens/FeedPage';
 import { DiaryPage } from '@features/diary/screens/DiaryPage';
 import { DiaryEntryPage } from '@features/diary/screens/DiaryEntryPage';
 import { ProfilePlaceholderPage } from '@pages/profile/ProfilePlaceholderPage';

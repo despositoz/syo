@@ -171,7 +171,7 @@ test.describe('Active draft card', () => {
   test('the draft poster is not clipped at 320px', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
     await page.goto('/');
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
     await page
       .getByRole('button', { name: /Начать оценку|Продолжить оценку|Изменить оценку/ })
       .click();
@@ -195,7 +195,7 @@ test.describe('Rating and writing at 320px', () => {
 
   const openRating = async (page: Page) => {
     await page.goto('/');
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
     await page
       .getByRole('button', { name: /Начать оценку|Продолжить оценку|Изменить оценку/ })
       .click();
@@ -333,7 +333,7 @@ test.describe('Dialogs and controls', () => {
   test('a sheet keeps the keyboard inside it', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
     await page
       .getByRole('button', { name: /Начать оценку|Продолжить оценку|Изменить оценку/ })
       .click();

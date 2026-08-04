@@ -97,7 +97,7 @@ describe('startup', () => {
     expect(
       await screen.findByText('Не получилось загрузить ленту.', undefined, { timeout: 8000 }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Попробовать снова' })).toBeInTheDocument();
     // A screen-level failure is the one error worth feeling (spec §21).
     expect(telegram.calls).toContain('haptic.notification.error');
   }, 15000);

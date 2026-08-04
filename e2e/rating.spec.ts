@@ -11,7 +11,7 @@ import {
 /** Film page → "Начать оценку" → mode chooser. */
 const openModeChooser = async (page: Page) => {
   await page.goto('/');
-  await page.getByText('Фильм 101').click();
+  await page.getByTestId('feed-open-film').first().click();
   await expect(page.getByTestId('film-title')).toBeAttached();
   await page
     .getByRole('button', { name: /Начать оценку|Продолжить оценку|Изменить оценку/ })
@@ -176,7 +176,7 @@ test.describe('Rating flow', () => {
 
     // Same step, and the earlier answers are still in the running total.
     await expect(page.getByText('Как фильм был сделан?')).toBeVisible();
-    await expect(page.getByText('Сейчас')).toBeVisible();
+    await expect(page.getByText('Сейчас', { exact: true })).toBeVisible();
   });
 
   test('saving opens the saved entry and survives a restart', async ({ page }) => {

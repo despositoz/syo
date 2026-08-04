@@ -14,7 +14,7 @@ test.describe('Telegram Mini App shell', () => {
     await mockTelegram(page, { fullscreen: false });
     await page.goto('/');
 
-    await expect(page.getByText('Фильм 101')).toBeVisible();
+    await expect(page.getByTestId('feed-open-film').first()).toBeVisible();
     await expect(page.getByLabel('Основная навигация')).toBeVisible();
 
     const calls = await telegramCalls(page);
@@ -27,7 +27,7 @@ test.describe('Telegram Mini App shell', () => {
     await mockTmdb(page);
     await mockTelegram(page, { fullscreen: false });
     await page.goto('/');
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
 
     await expect(page.getByTestId('film-title')).toBeVisible();
     const calls = await telegramCalls(page);
@@ -45,7 +45,7 @@ test.describe('Telegram Mini App shell', () => {
       webApp.isVersionAtLeast = () => false;
     });
     await page.goto('/');
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
 
     await expect(page.getByTestId('film-title')).toBeVisible();
     await expect(page.getByTestId('app-back-button')).toHaveCount(0);
@@ -56,7 +56,7 @@ test.describe('Telegram Mini App shell', () => {
     await mockTmdb(page);
     await mockTelegram(page, { fullscreen: true });
     await page.goto('/');
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
 
     await expect(page.getByTestId('app-back-button')).toBeVisible();
     expect(await isTelegramBackVisible(page)).toBe(false);
@@ -72,7 +72,7 @@ test.describe('Telegram Mini App shell', () => {
       webApp.isVersionAtLeast = () => false;
     });
     await page.goto('/');
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
     await expect(page.getByTestId('film-title')).toBeVisible();
 
     await pressTelegramBack(page);
@@ -90,7 +90,7 @@ test.describe('Telegram Mini App shell', () => {
       contentSafeAreaTop: 46,
     });
     await page.goto('/');
-    await expect(page.getByText('Фильм 101')).toBeVisible();
+    await expect(page.getByTestId('feed-open-film').first()).toBeVisible();
 
     expect(await cssVar(page, '--safe-top')).toBe('59px');
     expect(await cssVar(page, '--content-safe-top')).toBe('105px');
@@ -101,7 +101,7 @@ test.describe('Telegram Mini App shell', () => {
     await mockTmdb(page);
     await mockTelegram(page, { fullscreen: true, contentSafeAreaTop: 46 });
     await page.goto('/');
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
 
     const back = page.getByTestId('app-back-button');
     await expect(back).toBeVisible();
@@ -130,7 +130,7 @@ test.describe('Telegram Mini App shell', () => {
     const viewport = page.viewportSize()!;
     expect(box.y + box.height).toBeLessThanOrEqual(viewport.height - 34 + 1);
 
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
     await expect(page.getByTestId('film-title')).toBeVisible();
     await expect(bar).toHaveAttribute('aria-hidden', 'true');
   });

@@ -10,7 +10,7 @@ test.describe('Reduce Motion and viewport sizes', () => {
 
     await expect(page.locator('html')).toHaveAttribute('data-motion', 'reduced');
 
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
     await expect(page.getByTestId('film-title')).toBeVisible();
 
     await page.getByTestId('app-back-button').click();
@@ -21,7 +21,7 @@ test.describe('Reduce Motion and viewport sizes', () => {
     await mockTmdb(page, { logo: 'none' });
     await mockTelegram(page, { fullscreen: true });
     await page.goto('/');
-    await expect(page.getByText('Фильм 101')).toBeVisible();
+    await expect(page.getByTestId('feed-open-film').first()).toBeVisible();
 
     const { shellHeight, viewportHeight } = await page.evaluate(() => {
       const shell = document.querySelector('#root > div');
@@ -57,7 +57,7 @@ test.describe('Reduce Motion and viewport sizes', () => {
     await mockTmdb(page, { logo: 'none' });
     await mockTelegram(page, { fullscreen: true });
     await page.goto('/');
-    await expect(page.getByText('Фильм 101')).toBeVisible();
+    await expect(page.getByTestId('feed-open-film').first()).toBeVisible();
 
     const tooSmall = await page.evaluate(() => {
       const nodes = Array.from(document.querySelectorAll('button'));

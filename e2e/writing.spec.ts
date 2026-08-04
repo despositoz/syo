@@ -13,7 +13,7 @@ import { cssVar, mockTelegram, mockTmdb } from './fixtures';
 /** Rates a film and saves it, leaving the saved entry on screen. */
 const saveRating = async (page: Page) => {
   await page.goto('/');
-  await page.getByText('Фильм 101').click();
+  await page.getByTestId('feed-open-film').first().click();
   await expect(page.getByTestId('film-title')).toBeAttached();
   await page
     .getByRole('button', { name: /Начать оценку|Продолжить оценку|Изменить оценку/ })

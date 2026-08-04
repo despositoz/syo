@@ -43,7 +43,7 @@ const openDiary = async (page: Page) => {
 
 const startWriting = async (page: Page) => {
   await page.goto('/');
-  await page.getByText('Фильм 101').click();
+  await page.getByTestId('feed-open-film').first().click();
   await page
     .getByRole('button', { name: /Начать оценку|Продолжить оценку|Изменить оценку/ })
     .click();

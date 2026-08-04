@@ -1,0 +1,429 @@
+/*
+ * Four genuinely different compositions (P0.4 §17). They share a surface and
+ * a media primitive, but nothing here is one `.feed-card` with swapped text:
+ * a milestone is typography, an observation is a collage, a recommendation is
+ * media-led, and a watchlist return is a quiet row.
+ */
+
+.swipeHost {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  /* The action background lives behind the card and is revealed by the drag. */
+  background: var(--color-surface);
+}
+
+.actionLayer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  font-size: 0.9375rem;
+  font-weight: 620;
+  pointer-events: none;
+}
+
+/* The threshold reads through shape and light, not colour alone (§29.9). */
+.actionSide {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  opacity: 0.5;
+  transform: scale(0.94);
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.actionSide[data-armed='true'] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.actionSide[data-side='right'] {
+  color: var(--color-accent-text);
+}
+
+.actionSide[data-side='left'] {
+  color: var(--color-text-secondary);
+}
+
+.swipeCard {
+  position: relative;
+  touch-action: pan-y;
+  /*
+   * Opaque on purpose. The app's surfaces are translucent, so a card that only
+   * carried `--color-surface` let the action words behind it read straight
+   * through the title at rest — the drag is what reveals them, nothing else.
+   */
+  background: var(--color-bg-raised);
+  border-radius: var(--radius-lg);
+}
+
+.swipeCard[data-dragging='false'] {
+  transition: transform 180ms var(--ease-standard);
+}
+
+/* --- cinematic recommendation ------------------------------------------- */
+
+.cinematic {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface);
+  text-align: left;
+}
+
+.cinematicMedia {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: linear-gradient(
+    160deg,
+    rgba(var(--card-accent-rgb, 111, 42, 53), 0.85),
+    rgba(var(--card-accent-rgb, 111, 42, 53), 0.35)
+  );
+}
+
+/* The image layer is what parallax moves; the text never does (§19.2). */
+.cinematicLayer {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.cinematicImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+
+.cinematicScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(10, 8, 9, 0.86) 0%, rgba(10, 8, 9, 0) 62%);
+}
+
+.cinematicBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+}
+
+/* The title is the way into the film, so it is a real touch target. */
+.cinematicTitle {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 640;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+}
+
+/* One line, and it is checkable against the user's own diary (§7.1). */
+.reason {
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.cardActions[data-inline='true'] {
+  padding: 0;
+}
+
+/* --- observation --------------------------------------------------------- */
+
+.observation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-hairline);
+}
+
+/* A collage of fragments, moving as one layer — never each poster on its own. */
+.collage {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.collageFrame {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 76px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.observationHeadline {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 620;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  text-wrap: balance;
+}
+
+.observationSupport {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+}
+
+.evidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.evidenceLine {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.evidenceFilms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.evidenceFilm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.evidenceFilm:active {
+  background: var(--color-surface);
+}
+
+.evidencePoster {
+  flex: 0 0 36px;
+  width: 36px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.evidenceTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.evidenceScore {
+  flex: 0 0 auto;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+}
+
+/* --- milestone ----------------------------------------------------------- */
+
+/* Typography, not a dashboard tile. No confetti, no permanent glow (§17.4). */
+.milestone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(
+      120% 80% at 20% 0%,
+      rgba(var(--film-accent-rgb, 111, 42, 53), 0.28),
+      transparent 70%
+    ),
+    var(--color-surface);
+}
+
+.milestoneValue {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 12vw, 3.5rem);
+  font-weight: 660;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.milestoneHeadline {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 620;
+  line-height: 1.25;
+  color: var(--color-text);
+  text-wrap: balance;
+}
+
+.milestonePosters {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.milestonePoster {
+  flex: 0 0 40px;
+  width: 40px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+/* --- watchlist return and discovery -------------------------------------- */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: left;
+}
+
+.rowPoster {
+  flex: 0 0 64px;
+  width: 64px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.rowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.rowTitle {
+  /* A button, so it needs telling: text starts at the left like the rest. */
+  text-align: left;
+  /* The title is the way into the film, so it is a real touch target. */
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+/* A label only where it means something (§27.3). */
+.label {
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: rgba(var(--film-accent-rgb, 111, 42, 53), 0.28);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* --- collection rail ------------------------------------------------------ */
+
+.collection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.collectionTitle {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 620;
+  color: var(--color-text);
+}
+
+/*
+ * Horizontal scrolling that never competes with the feed's own vertical
+ * scroll: `pan-x` claims one axis and leaves the other alone (§17.2).
+ */
+.rail {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  padding-bottom: var(--space-1);
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.railItem {
+  flex: 0 0 116px;
+  width: 116px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  text-align: left;
+}
+
+.railPoster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.railTitle {
+  font-size: 0.875rem;
+  line-height: 1.25;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipeCard[data-dragging='false'],
+  .actionSide {
+    transition: none;
+  }
+}

@@ -4,7 +4,7 @@ import { mockTelegram, mockTmdb } from './fixtures';
 
 const openFilm = async (page: Page) => {
   await page.goto('/');
-  await page.getByText('Фильм 101').click();
+  await page.getByTestId('feed-open-film').first().click();
   await expect(page.getByTestId('film-title')).toBeAttached();
 };
 
@@ -25,7 +25,7 @@ test.describe('Film Page hero', () => {
     await mockTelegram(page, { fullscreen: true });
 
     await page.goto('/');
-    await page.getByText('Фильм 101').click();
+    await page.getByTestId('feed-open-film').first().click();
 
     // The painted title is either absent or already the logo — never text first.
     const logo = page.locator('img[data-tone]');

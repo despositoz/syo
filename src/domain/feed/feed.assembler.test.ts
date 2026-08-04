@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   assembleFeed,
+  enforceSequence,
   mixItems,
   reconcileSnapshot,
   type FeedAssemblyInput,
 } from './feed.assembler';
+import type { ObservationCode } from './feed.types';
 import type { RecommendationCandidate } from './recommendation.engine';
 import type { DiaryEntry } from '@domain/diary/diary.types';
 import type { Film, FilmSummary } from '@entities/film/film.model';
@@ -440,5 +442,100 @@ describe('reconciliation', () => {
     const { snapshot, newItemIds } = reconcileSnapshot(previous, next);
     expect(snapshot.items.map((item) => item.id)).toEqual(['a']);
     expect(newItemIds).not.toContain('b');
+  });
+});
+
+describe('the sequence rules hold over the whole feed', () => {
+  /** The fields every item carries, so each case only states what matters. */
+  const base = (id: string) => ({
+    id,
+    generatedAt: NOW,
+    createdAt: NOW,
+    sourceRevision: 1,
+    rank: 0,
+    expiresAt: null,
+    dismissedAt: null,
+    reason: null,
+  });
+
+  const rec = (id: string): FeedItem => ({
+    ...base(id),
+    kind: 'cinematicRecommendation',
+    film: summary(Number(id.replace(/\D/g, '')) || 1),
+    reason: {
+      code: 'similarToHighlyRated',
+      shortText: 'Похож на то, что ты оценил высоко',
+      sourceFilmIds: [1],
+      sourcePersonIds: [],
+      evidenceLabel: null,
+    },
+    seedFilmIds: [1],
+  });
+
+  const observation = (id: string, code: ObservationCode): FeedItem => ({
+    ...base(id),
+    kind: 'observation',
+    observationCode: code,
+    headline: 'Наблюдение',
+    supportingText: null,
+    evidence: { filmIds: [1, 2, 3], values: {}, sampleSize: 3, calculationVersion: 1 },
+    confidence: 'medium',
+  });
+
+  it('breaks up a wall of recommendations with what else is there', () => {
+    const ordered = enforceSequence([
+      rec('r1'),
+      rec('r2'),
+      rec('r3'),
+      rec('r4'),
+      rec('r5'),
+      observation('o1', 'genreAffinity'),
+      observation('o2', 'directorAffinity'),
+    ]);
+
+    // Never three recommendations in a row while something else is waiting.
+    let run = 0;
+    for (const item of ordered) {
+      run = item.kind === 'cinematicRecommendation' ? run + 1 : 0;
+      expect(run).toBeLessThanOrEqual(2);
+    }
+    expect(ordered).toHaveLength(7);
+  });
+
+  it('keeps a run when there is genuinely nothing else to show', () => {
+    const only = [rec('r1'), rec('r2'), rec('r3'), rec('r4')];
+    // Nothing personal exists yet: a cold start is allowed to be a list.
+    expect(enforceSequence(only).map((item) => item.id)).toEqual(['r1', 'r2', 'r3', 'r4']);
+  });
+
+  it('never places two milestones together', () => {
+    const milestone = (id: string, code: string): FeedItem => ({
+      ...base(id),
+      kind: 'milestone',
+      milestoneCode: code,
+      value: 10,
+      headline: 'Веха',
+      supportingText: null,
+      filmIds: [],
+    });
+
+    const ordered = enforceSequence([
+      milestone('m1', 'ratings:10'),
+      milestone('m2', 'texts:10'),
+      rec('r1'),
+    ]);
+    expect(ordered[0]!.kind).toBe('milestone');
+    expect(ordered[1]!.kind).not.toBe('milestone');
+  });
+
+  it('does not put two observations of the same template side by side', () => {
+    const ordered = enforceSequence([
+      observation('o1', 'genreAffinity'),
+      observation('o2', 'genreAffinity'),
+      rec('r1'),
+    ]);
+
+    expect(ordered[0]!.kind).toBe('observation');
+    expect(ordered[1]!.kind).not.toBe('observation');
   });
 });

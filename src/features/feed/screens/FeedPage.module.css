@@ -1,0 +1,178 @@
+.page {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.scroll {
+  height: 100%;
+  /* The pull gesture needs the vertical axis; nothing else is claimed. */
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+
+/*
+ * A shallow shade over the system area only. It never becomes a black lid over
+ * the first card (P0.4 §18.3).
+ */
+.shade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--content-safe-top) + 72px);
+  background: linear-gradient(to bottom, rgba(8, 6, 7, 0.72) 0%, rgba(8, 6, 7, 0) 100%);
+  pointer-events: none;
+  z-index: var(--z-shade);
+}
+
+/* Follows the scroll, never a timer (§18.4). */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-toolbar);
+  transition:
+    transform 200ms var(--ease-standard),
+    opacity 200ms var(--ease-standard);
+}
+
+.header[data-hidden='true'] {
+  transform: translate3d(0, -100%, 0);
+  opacity: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-left: max(var(--space-4), calc(var(--content-safe-left) + var(--space-4)));
+  padding-right: max(var(--space-4), calc(var(--content-safe-right) + var(--space-4)));
+  /* Clears the floating bottom bar and the system inset (§28.2). */
+  padding-bottom: calc(var(--safe-bottom) + 108px);
+  width: min(100%, var(--content-max-feed));
+  margin-inline: auto;
+}
+
+/* --- pull to refresh ------------------------------------------------------ */
+
+.pullMarker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.pullMarker[data-state='armed'],
+.pullMarker[data-state='refreshing'] {
+  color: var(--color-text-secondary);
+}
+
+/* --- new items ------------------------------------------------------------ */
+
+/*
+ * Floats over the list rather than sitting in it: a pill that pushed the feed
+ * down would move the very content the user is reading (§23.3).
+ */
+.newItems {
+  position: sticky;
+  top: calc(var(--content-safe-top) + 8px);
+  margin-bottom: calc(var(--touch-min) * -1);
+  z-index: var(--z-toolbar);
+  align-self: center;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-hairline);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* --- states --------------------------------------------------------------- */
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.invitation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+}
+
+.invitationTitle {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 620;
+  color: var(--color-text);
+  text-wrap: balance;
+}
+
+.invitationText {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+}
+
+.staleNote {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+}
+
+.staleNote button {
+  color: var(--color-accent-text);
+  font-weight: 620;
+}
+
+.end {
+  padding: var(--space-6) 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+}
+
+/* --- why sheet ------------------------------------------------------------ */
+
+.why {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.whyReason {
+  font-size: 1rem;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.whySources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.whyActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header {
+    transition: none;
+  }
+}

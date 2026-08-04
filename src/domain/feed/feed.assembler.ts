@@ -168,6 +168,16 @@ const buildFallback = (input: FeedAssemblyInput, exclude: Set<number>): FeedItem
 
 /* --- mixing -------------------------------------------------------------- */
 
+/** Beyond this a run of recommendations reads as a catalogue (§5.5). */
+const MAX_RECOMMENDATION_RUN = 2;
+
+/**
+ * How much history a snapshot carries. Old items stay so the feed keeps its
+ * past (§5.3), but not forever: every refresh would otherwise add a batch and
+ * the list would grow without end (§30.2).
+ */
+export const MAX_HISTORY = 60;
+
 const isRecommendationLike = (item: FeedItem): boolean =>
   item.kind === 'cinematicRecommendation' || item.kind === 'discoveryFallback';
 
@@ -319,6 +329,55 @@ const applyObservationCooldown = (items: FeedItem[]): FeedItem[] => {
  * §23). Unchanged items keep their identity and their place; genuinely new
  * items go on top; nothing that was dismissed comes back.
  */
+/**
+ * Enforces the sequence rules over a whole list (§5.5).
+ *
+ * Mixing at assembly time is not enough: a refresh prepends its new items as a
+ * block, and a block of recommendations on top of yesterday's feed is exactly
+ * the wall of identical rows the rules exist to prevent. The pass is stable —
+ * it only pulls the nearest non-recommendation forward when a run gets too
+ * long, so unchanged items keep their relative order.
+ */
+export const enforceSequence = (items: FeedItem[]): FeedItem[] => {
+  const remaining = [...items];
+  const result: FeedItem[] = [];
+  let run = 0;
+
+  while (remaining.length) {
+    let index = 0;
+    if (run >= MAX_RECOMMENDATION_RUN && isRecommendationLike(remaining[0]!)) {
+      const relief = remaining.findIndex((item) => !isRecommendationLike(item));
+      if (relief > 0) index = relief;
+    }
+
+    const [item] = remaining.splice(index, 1);
+    const previous = result[result.length - 1];
+
+    // Two milestones or two identical observation templates never touch.
+    if (
+      previous &&
+      ((previous.kind === 'milestone' && item!.kind === 'milestone') ||
+        (previous.kind === 'observation' &&
+          item!.kind === 'observation' &&
+          previous.observationCode === item!.observationCode))
+    ) {
+      const other = remaining.findIndex((candidate) => candidate.kind !== item!.kind);
+      if (other >= 0) {
+        const [swap] = remaining.splice(other, 1);
+        result.push(swap!);
+        remaining.unshift(item!);
+        run = isRecommendationLike(swap!) ? run + 1 : 0;
+        continue;
+      }
+    }
+
+    result.push(item!);
+    run = isRecommendationLike(item!) ? run + 1 : 0;
+  }
+
+  return result;
+};
+
 export const reconcileSnapshot = (
   previous: FeedSnapshot | null,
   next: FeedSnapshot,
@@ -341,7 +400,11 @@ export const reconcileSnapshot = (
     .filter((item) => !dismissed.has(item.id))
     .map((item) => next.items.find((candidate) => candidate.id === item.id) ?? item);
 
-  const items = [...fresh, ...kept].map((item, index) => ({ ...item, rank: index }));
+  // New items on top, history below — then the sequence rules over the whole
+  // visible list, not just over each batch.
+  const items = enforceSequence([...fresh, ...kept])
+    .slice(0, MAX_HISTORY)
+    .map((item, index) => ({ ...item, rank: index }));
 
   return {
     snapshot: { ...next, items },
