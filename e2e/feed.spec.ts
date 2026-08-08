@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { mockTelegram, mockTmdb } from './fixtures';
-import { seedDiary } from './helpers/seed';
+import { seedDiary, seedFilms } from './helpers/seed';
 import { expectInsideViewport, expectNoOverlap } from './helpers/layout';
 
 /**
@@ -39,6 +39,16 @@ const scrollFeed = async (page: Page, share: number): Promise<number> => {
 /** Rates films so the local engines have something real to say. */
 const seedRatedFilms = async (page: Page, count = 8) => {
   await page.goto('/');
+  // The engine reads genres and directors from the film cache, so a rated film
+  // that is not cached says nothing about taste.
+  await seedFilms(
+    page,
+    Array.from({ length: count }, (_, index) => ({
+      id: 900 + index,
+      genres: index % 2 === 0 ? ['фантастика', 'драма'] : ['драма'],
+      director: index % 3 === 0 ? 'Дени Вильнёв' : `Режиссёр ${index}`,
+    })),
+  );
   await seedDiary(page, {
     count,
     overrides: (index) => ({
@@ -103,15 +113,21 @@ test.describe('Feed', () => {
     await openFeed(page);
 
     const before = await cards(page).count();
-    const firstId = await cards(page).first().getAttribute('data-feed-item');
+    // The card that owns the button, not simply the first one: the top of the
+    // feed may be a milestone, which has nothing to explain and no menu.
+    const targetId = await page
+      .locator('[data-feed-item]')
+      .filter({ has: page.getByTestId('feed-why') })
+      .first()
+      .getAttribute('data-feed-item');
 
     await page.getByTestId('feed-why').first().click();
     await page.getByTestId('feed-why-not-interested').click();
 
-    await expect(page.locator(`[data-feed-item="${firstId}"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-feed-item="${targetId}"]`)).toHaveCount(0);
     await page.getByTestId('snackbar-action').click();
 
-    await expect(page.locator(`[data-feed-item="${firstId}"]`)).toHaveCount(1);
+    await expect(page.locator(`[data-feed-item="${targetId}"]`)).toHaveCount(1);
     expect(await cards(page).count()).toBe(before);
   });
 
@@ -197,7 +213,7 @@ test.describe('Feed', () => {
     await openFeed(page);
 
     const observation = page.getByTestId('feed-observation').first();
-    if ((await observation.count()) === 0) test.skip();
+    await expect(observation).toBeVisible();
 
     const toggle = observation.getByRole('button').first();
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');

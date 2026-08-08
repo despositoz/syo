@@ -32,6 +32,70 @@ export const diaryText = (text: string, spoiler = false) => ({
   spoiler,
 });
 
+/**
+ * Puts films into the local film cache with the fields the insight engine
+ * reads: genres, director and cast. Without them an observation cannot be
+ * derived at all, so a test that expects one has to provide them.
+ */
+export const seedFilms = async (
+  page: Page,
+  films: { id: number; title?: string; genres?: string[]; director?: string; cast?: string[] }[],
+): Promise<void> => {
+  const rows = films.map((film) => ({
+    id: film.id,
+    cachedAt: Date.now(),
+    film: {
+      id: film.id,
+      title: film.title ?? `Фильм ${film.id}`,
+      originalTitle: `Movie ${film.id}`,
+      year: '2023',
+      releaseDate: '2023-05-01',
+      genres: film.genres ?? ['драма'],
+      posterPath: '/poster.png',
+      backdropPath: '/backdrop.png',
+      overview: 'Описание',
+      rating: 7.5,
+      voteCount: 900,
+      accent: { hex: '#6f2a35', rgb: '111, 42, 53' },
+      runtime: 110,
+      director: film.director ?? 'Режиссёр Тест',
+      cast: (film.cast ?? ['Актриса Тест']).map((name, index) => ({
+        id: 1000 + index,
+        name,
+        character: 'Она',
+        profilePath: '/profile.png',
+      })),
+      logoCandidates: [],
+      tagline: '',
+      countries: ['США'],
+      productionCompanies: ['Studio'],
+      originalLanguage: 'en',
+      budget: 0,
+      revenue: 0,
+      detailed: true,
+    },
+  }));
+
+  await page.evaluate(async (entries) => {
+    const open = () =>
+      new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('syo');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+    const db = await open();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction('films', 'readwrite');
+      const store = transaction.objectStore('films');
+      for (const entry of entries) store.put(entry);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+  }, rows);
+};
+
 export const seedDiary = async (page: Page, options: SeedEntryOptions = {}): Promise<void> => {
   const count = options.count ?? 6;
   const rows = Array.from({ length: count }, (_, index) => ({

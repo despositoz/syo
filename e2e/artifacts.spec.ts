@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { mockTelegram, mockTmdb } from './fixtures';
-import { diaryText, seedDiary } from './helpers/seed';
+import { diaryText, seedDiary, seedFilms } from './helpers/seed';
 
 /**
  * Deliverable artefacts (P0.3.1 §23.6, §23.7): screenshots of the screens the
@@ -99,7 +99,76 @@ test.describe('artefacts', () => {
   });
 });
 
+test.describe('feed artefacts', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockTmdb(page, { logo: 'none' });
+    await mockTelegram(page, { fullscreen: true });
+    await page.setViewportSize({ width: 393, height: 852 });
+  });
+
+  test('cold start and a personalised feed', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('[data-feed-item]').first().waitFor();
+    await shoot(page, 'feed-cold-start');
+
+    // Rate films the mock does not serve as trending, so recommendations and
+    // observations have something to work from — and cache their genres and
+    // directors, which is what the insight engine actually reads.
+    await seedFilms(
+      page,
+      Array.from({ length: 9 }, (_, index) => ({
+        id: 900 + index,
+        genres: index % 2 === 0 ? ['фантастика', 'драма'] : ['драма'],
+        director: index % 3 === 0 ? 'Дени Вильнёв' : `Режиссёр ${index}`,
+      })),
+    );
+    await seedDiary(page, {
+      count: 9,
+      overrides: (index) => ({
+        filmId: 900 + index,
+        filmTitle: `Фильм ${900 + index}`,
+        overallRating: index % 3 === 0 ? 5 : 4,
+        preciseRating: index % 3 === 0 ? 5 : 4,
+      }),
+    });
+    await page.goto('/');
+    await page.locator('[data-feed-item]').first().waitFor();
+    await page.waitForTimeout(600);
+    await shoot(page, 'feed-personal');
+
+    const why = page.getByTestId('feed-why').first();
+    if (await why.count()) {
+      await why.click();
+      await shoot(page, 'feed-why-sheet');
+    }
+  });
+
+  test('the feed at 320 and in a wide window', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto('/');
+    await page.locator('[data-feed-item]').first().waitFor();
+    await shoot(page, 'feed-320');
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(200);
+    await shoot(page, 'feed-desktop-wide');
+  });
+});
+
 test.describe('resize recording', () => {
+  test('scrolling the feed slowly, for the parallax', async ({ page }) => {
+    await mockTmdb(page, { logo: 'none' });
+    await mockTelegram(page, { fullscreen: true });
+    await page.setViewportSize({ width: 393, height: 852 });
+    await page.goto('/');
+    await page.locator('[data-feed-item]').first().waitFor();
+
+    for (let step = 0; step < 40; step += 1) {
+      await page.getByTestId('feed-scroll').evaluate((node) => node.scrollBy(0, 40));
+      await page.waitForTimeout(50);
+    }
+  });
+
   test('a window shrinking from 900 to 280 never overlaps a card', async ({ page }) => {
     await mockTmdb(page, { logo: 'none' });
     await mockTelegram(page, { fullscreen: false });
