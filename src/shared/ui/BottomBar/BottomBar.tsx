@@ -18,6 +18,9 @@ const TAB_ICONS: Record<RootTab, ComponentType> = {
   profile: ProfileIcon,
 };
 
+/** Which of the four columns each tab sits in — the indicator slides to it. */
+const TAB_COLUMN: Record<RootTab, number> = { feed: 0, diary: 1, profile: 3 };
+
 /**
  * Floating glass island (spec §10).
  *
@@ -38,7 +41,6 @@ export const BottomBar = ({ activeTab, onSelectTab, onRate, hidden = false }: Bo
           aria-current={active ? 'page' : undefined}
           onClick={() => onSelectTab(tab)}
         >
-          <span className={styles.indicator} aria-hidden="true" />
           <span className={styles.icon} aria-hidden="true">
             <Icon />
           </span>
@@ -57,6 +59,12 @@ export const BottomBar = ({ activeTab, onSelectTab, onRate, hidden = false }: Bo
       inert={hidden}
     >
       <ul className={styles.list}>
+        <li
+          className={styles.selection}
+          data-column={TAB_COLUMN[activeTab]}
+          data-testid="bottom-bar-indicator"
+          aria-hidden="true"
+        />
         {renderTab('feed')}
         {renderTab('diary')}
         <li className={styles.item}>

@@ -128,10 +128,13 @@ describe('navigation', () => {
     await screen.findByText('Тихий свет');
 
     const bar = screen.getByLabelText('Основная навигация');
+    const indicator = within(bar).getByTestId('bottom-bar-indicator');
+    expect(indicator).toHaveAttribute('data-column', '0');
     await user.click(within(bar).getByRole('button', { name: 'Профиль' }));
 
     // The profile leads with who you are, not with the word "Профиль" (§11.1).
     expect(await screen.findByTestId('profile-identity')).toBeInTheDocument();
+    expect(indicator).toHaveAttribute('data-column', '3');
     expect(screen.getByLabelText('Основная навигация')).not.toHaveAttribute('aria-hidden');
   });
 });

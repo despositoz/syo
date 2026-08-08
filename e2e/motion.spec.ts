@@ -2,6 +2,41 @@ import { expect, test } from '@playwright/test';
 import { mockTelegram, mockTmdb } from './fixtures';
 
 test.describe('Reduce Motion and viewport sizes', () => {
+  test('the bottom-bar selection moves between tabs', async ({ page }) => {
+    await mockTmdb(page, { logo: 'none' });
+    await mockTelegram(page, { fullscreen: true });
+    await page.goto('/');
+
+    const indicator = page.getByTestId('bottom-bar-indicator');
+    await expect(indicator).toHaveAttribute('data-column', '0');
+
+    const motion = await indicator.evaluate((element) => {
+      const style = getComputedStyle(element, '::before');
+      return {
+        reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+        duration: Number.parseFloat(style.transitionDuration) * 1000,
+      };
+    });
+
+    if (motion.reduced) expect(motion.duration).toBeLessThanOrEqual(1);
+    else expect(motion.duration).toBeGreaterThan(0);
+
+    await page.getByLabel('Основная навигация').getByRole('button', { name: 'Профиль' }).click();
+    await expect(indicator).toHaveAttribute('data-column', '3');
+
+    const targetX = await indicator.evaluate(
+      (element) => element.getBoundingClientRect().width * 0.75,
+    );
+    await expect
+      .poll(() =>
+        indicator.evaluate((element) => {
+          const transform = getComputedStyle(element, '::before').transform;
+          return new DOMMatrixReadOnly(transform).m41;
+        }),
+      )
+      .toBeCloseTo(targetX, 0);
+  });
+
   test('marks reduced motion on the document and still navigates', async ({ page }) => {
     await mockTmdb(page, { logo: 'none' });
     await mockTelegram(page, { fullscreen: true });
