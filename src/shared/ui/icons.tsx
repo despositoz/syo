@@ -14,6 +14,22 @@ export const BackIcon = () => (
   </svg>
 );
 
+/**
+ * Reorder arrows. Real SVG from the same set: a Unicode «←» is a glyph whose
+ * weight and baseline belong to the text font, not to the icon system (§12).
+ */
+export const ArrowLeftIcon = () => (
+  <svg viewBox="0 0 24 24" {...stroke}>
+    <path d="M15 5 8 12l7 7" />
+  </svg>
+);
+
+export const ArrowRightIcon = () => (
+  <svg viewBox="0 0 24 24" {...stroke}>
+    <path d="M9 5l7 7-7 7" />
+  </svg>
+);
+
 export const SearchIcon = () => (
   <svg viewBox="0 0 24 24" {...stroke}>
     <circle cx="11" cy="11" r="6.4" />

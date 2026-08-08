@@ -6,7 +6,7 @@ import type { Film } from '@entities/film/film.model';
 import { Poster } from '@shared/ui/Poster/Poster';
 import { Button } from '@shared/ui/Button/Button';
 import { IconButton } from '@shared/ui/IconButton/IconButton';
-import { CloseIcon } from '@shared/ui/icons';
+import { ArrowLeftIcon, ArrowRightIcon, CloseIcon } from '@shared/ui/icons';
 import styles from './ProfileParts.module.css';
 
 /**
@@ -347,7 +347,7 @@ export const FavoriteEditorRow = ({
         onClick={() => onMove(index - 1)}
         data-testid="favorite-move-left"
       >
-        <span aria-hidden="true">←</span>
+        <ArrowLeftIcon />
       </IconButton>
       <IconButton
         label="Переместить правее"
@@ -356,7 +356,7 @@ export const FavoriteEditorRow = ({
         onClick={() => onMove(index + 1)}
         data-testid="favorite-move-right"
       >
-        <span aria-hidden="true">→</span>
+        <ArrowRightIcon />
       </IconButton>
       <IconButton
         label="Убрать из любимых"

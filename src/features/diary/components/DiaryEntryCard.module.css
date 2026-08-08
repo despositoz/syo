@@ -75,7 +75,7 @@
 
 /* One short highlight after a save — the grid never replays its entrance. */
 .card[data-highlighted] {
-  animation: cardHighlight 1400ms var(--ease-standard) 1;
+  animation: cardHighlight var(--duration-highlight) var(--ease-standard) 1;
 }
 
 @keyframes cardHighlight {

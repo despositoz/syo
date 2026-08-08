@@ -80,6 +80,12 @@ export const pathToStack = (pathname: string): Route[] => {
     return [diaryRoot, { kind: 'diaryEntry', entryId: second }];
   }
 
+  // Before the root-tab match, for the same reason as 'diary': 'profile' is
+  // both a tab and the prefix of a nested screen, and the longer form wins.
+  if (first === 'profile' && second === 'signature') {
+    return [{ kind: 'root', tab: 'profile' }, { kind: 'tasteSignature' }];
+  }
+
   if (isRootTab(first)) return [{ kind: 'root', tab: first }];
 
   if (first === 'rate') {
@@ -99,10 +105,6 @@ export const pathToStack = (pathname: string): Route[] => {
       }
     }
     return ratingStack(filmId, { kind: 'rateMode', filmId });
-  }
-
-  if (first === 'profile' && second === 'signature') {
-    return [{ kind: 'root', tab: 'profile' }, { kind: 'tasteSignature' }];
   }
 
   if (first === 'settings') {

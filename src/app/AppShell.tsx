@@ -102,17 +102,20 @@ const PageLayer = ({
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const reducedMotion = usePerformanceStore((state) => state.reducedMotion);
+  const motionScale = usePerformanceStore((state) => state.motionScale);
 
   useEffect(() => {
     let cancelled = false;
-    void runPageTransition(ref.current, direction, { reducedMotion }).then(() => {
-      if (!cancelled && direction === 'exit') onExitComplete?.();
-    });
+    void runPageTransition(ref.current, direction, { reducedMotion, scale: motionScale }).then(
+      () => {
+        if (!cancelled && direction === 'exit') onExitComplete?.();
+      },
+    );
     return () => {
       cancelled = true;
     };
     // Direction never changes for a given layer instance.
-  }, [direction, reducedMotion, onExitComplete]);
+  }, [direction, reducedMotion, motionScale, onExitComplete]);
 
   return (
     <div
@@ -147,7 +150,16 @@ export const AppShell = () => {
 
   return (
     <div className={styles.shell}>
-      <div className={styles.rootLayer} aria-hidden={overlayRoute ? true : undefined}>
+      {/*
+       * Covered by a nested screen: hidden from the reader *and* from Tab.
+       * aria-hidden alone would leave the tab bar and the whole root screen
+       * focusable behind the overlay (Master §47).
+       */}
+      <div
+        className={styles.rootLayer}
+        aria-hidden={overlayRoute ? true : undefined}
+        inert={Boolean(overlayRoute)}
+      >
         <RootScreen tab={activeTab} />
       </div>
 

@@ -64,10 +64,21 @@
   --z-snackbar: 60;
   --z-sheet: 70;
 
-  --duration-instant: 90ms;
-  --duration-fast: 140ms;
-  --duration-page-in: 220ms;
-  --duration-page-out: 190ms;
+  /*
+   * One knob for every duration in the app (Master §55). Screens never write
+   * a raw millisecond value: they pick a step, and the scale below decides how
+   * much of it actually runs.
+   */
+  --motion-scale: 1;
+  --duration-instant: calc(90ms * var(--motion-scale));
+  --duration-fast: calc(140ms * var(--motion-scale));
+  --duration-medium: calc(180ms * var(--motion-scale));
+  --duration-slow: calc(240ms * var(--motion-scale));
+  --duration-emphasis: calc(320ms * var(--motion-scale));
+  --duration-page-in: calc(220ms * var(--motion-scale));
+  --duration-page-out: calc(190ms * var(--motion-scale));
+  /* A one-off: long enough to be noticed, slow enough not to flash (§21). */
+  --duration-highlight: calc(1400ms * var(--motion-scale));
   --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 0.6, 1);
 
@@ -151,9 +162,12 @@
 
 /* Reduce Motion + performance tiers collapse expensive tokens. */
 :root[data-motion='reduced'] {
-  --duration-fast: 1ms;
-  --duration-page-in: 1ms;
-  --duration-page-out: 1ms;
+  --motion-scale: 0.01;
+}
+
+/* The in-app 'calm' choice: shorter, never absent (Master §48). */
+:root[data-motion='calm'] {
+  --motion-scale: 0.6;
 }
 
 :root[data-performance='balanced'] {

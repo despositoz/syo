@@ -11,7 +11,7 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.62);
   border: none;
-  animation: fade 160ms linear both;
+  animation: fade var(--duration-fast) linear both;
 }
 
 .panel {
@@ -25,7 +25,7 @@
   border-top-right-radius: var(--radius-xl);
   border-top: 1px solid var(--color-hairline);
   padding-bottom: calc(var(--safe-bottom) + var(--space-4));
-  animation: slide-up 200ms var(--ease-standard) both;
+  animation: slide-up var(--duration-medium) var(--ease-standard) both;
 }
 
 .header {

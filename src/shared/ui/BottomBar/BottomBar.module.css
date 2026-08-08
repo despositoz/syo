@@ -58,12 +58,12 @@
    */
   transition:
     color var(--duration-fast) var(--ease-standard),
-    transform 160ms var(--ease-standard);
+    transform var(--duration-fast) var(--ease-standard);
 }
 
 .tab:active,
 .rate:active {
-  transition-duration: var(--duration-fast), 100ms;
+  transition-duration: var(--duration-fast), var(--duration-instant);
 }
 
 .tab[data-active='true'] {

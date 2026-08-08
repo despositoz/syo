@@ -46,3 +46,23 @@ describe('routes', () => {
     }
   });
 });
+
+describe('profile routes', () => {
+  it('opens the taste signature from its own URL', () => {
+    // 'profile' is a tab *and* a prefix: the longer form has to win.
+    const stack = pathToStack('/profile/signature');
+    expect(stack.map((route) => route.kind)).toEqual(['root', 'tasteSignature']);
+  });
+
+  it('keeps the bare profile tab working', () => {
+    expect(pathToStack('/profile')).toEqual([{ kind: 'root', tab: 'profile' }]);
+  });
+
+  it('round-trips settings sections', () => {
+    for (const section of ['root', 'appearance', 'data', 'about'] as const) {
+      const path = routeToPath({ kind: 'settings', section });
+      const stack = pathToStack(path);
+      expect(stack[stack.length - 1]).toEqual({ kind: 'settings', section });
+    }
+  });
+});

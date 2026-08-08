@@ -76,7 +76,7 @@
   filter: blur(20px) saturate(1.15);
   transform: scale(1.06);
   opacity: 0;
-  transition: opacity 140ms linear;
+  transition: opacity var(--duration-fast) linear;
 }
 
 .stage[data-status='preview'] .preview,
@@ -86,7 +86,7 @@
 
 .full {
   opacity: 0;
-  transition: opacity 220ms linear;
+  transition: opacity var(--duration-slow) linear;
 }
 
 .stage[data-status='full'] .full {

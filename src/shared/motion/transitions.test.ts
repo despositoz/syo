@@ -39,4 +39,11 @@ describe('temporary back transition (spec §11)', () => {
     const timings = pageTimings('exit', { reducedMotion: true });
     expect(Number(timings.duration)).toBeLessThanOrEqual(100);
   });
+
+  it('shortens but never removes the transition when the user asks for calm', () => {
+    const calm = Number(pageTimings('enter', { reducedMotion: false, scale: 0.4 }).duration);
+    const full = Number(pageTimings('enter', { reducedMotion: false }).duration);
+    expect(calm).toBeLessThan(full);
+    expect(calm).toBeGreaterThan(0);
+  });
 });

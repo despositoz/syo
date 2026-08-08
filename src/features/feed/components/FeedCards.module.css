@@ -63,7 +63,7 @@
 }
 
 .swipeCard[data-dragging='false'] {
-  transition: transform 180ms var(--ease-standard);
+  transition: transform var(--duration-medium) var(--ease-standard);
 }
 
 /* --- cinematic recommendation ------------------------------------------- */
@@ -143,6 +143,36 @@
   line-height: 1.35;
   color: var(--color-text-secondary);
   overflow-wrap: anywhere;
+}
+
+/*
+ * The text actions inside a card are still touch targets: 44px minimum, with
+ * the label optically aligned by negative margin rather than by shrinking the
+ * hit area (Master §47).
+ */
+.cardActions[data-inline='true'] > button {
+  min-height: var(--touch-min);
+  padding-inline: var(--space-2);
+  /*
+   * Optical alignment on the left only. A negative margin on the right pushed
+   * the last action past the card at 200% text, where the label is wide enough
+   * to fill the row on its own.
+   */
+  margin-left: calc(var(--space-2) * -1);
+  max-width: 100%;
+  font-size: 0.9375rem;
+  font-weight: 620;
+  color: var(--color-accent-text);
+}
+
+.cardActions[data-inline='true'] > button + button {
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+.cardActions[data-inline='true'] {
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .cardActions {

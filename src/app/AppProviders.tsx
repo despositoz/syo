@@ -4,12 +4,13 @@ import { NavigationController } from './navigation/NavigationController';
 import { getTelegramController } from './telegram/telegramStore';
 import { AppServicesContext, type AppServices } from './appServices';
 import { ThemeProvider } from './theme/ThemeProvider';
-import { PerformanceController } from './performance/PerformanceController';
+import { PerformanceController, usePerformanceStore } from './performance/PerformanceController';
 import { ConnectivityController } from './connectivity/ConnectivityController';
 import { HapticManager, type HapticDriver } from '@shared/haptics/HapticManager';
 import { useWatchlistStore } from '@entities/watchlist/watchlist.store';
 import { useRatingStore } from '@features/rating/model/rating.store';
 import { useWritingStore } from '@features/writing/model/writing.store';
+import { useProfileStore } from '@features/profile/model/profile.store';
 import { useDiaryStore } from '@features/diary/model/diary.store';
 
 const createQueryClient = () =>
@@ -68,6 +69,7 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
     // The single slot holds a draft of either kind; both stores read it and
     // each keeps only the kind it owns.
     void useWritingStore.getState().hydrate();
+    void useProfileStore.getState().hydrate();
     void useDiaryStore.getState().hydrate();
 
     /*
@@ -75,6 +77,22 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
      * wrote the synchronous mirror; this is the best-effort flush of whatever
      * IndexedDB write was still in flight (spec §20.10).
      */
+    /*
+     * Presentation preferences are owned by the profile store and applied
+     * here: a setting that changes nothing is not a setting (Master §7, §48).
+     */
+    const applyPreferences = (preferences: {
+      haptics: 'off' | 'delicate' | 'full';
+      motion: 'system' | 'calm' | 'expressive';
+    }) => {
+      services.haptics.setIntensity(preferences.haptics);
+      usePerformanceStore.getState().setMotionPreference(preferences.motion);
+    };
+    applyPreferences(useProfileStore.getState().preferences);
+    const unsubscribePreferences = useProfileStore.subscribe((state, previous) => {
+      if (state.preferences !== previous.preferences) applyPreferences(state.preferences);
+    });
+
     const flush = () => {
       void useRatingStore.getState().flush();
       void useWritingStore.getState().flush();
@@ -86,6 +104,7 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
+      unsubscribePreferences();
       window.removeEventListener('pagehide', flush);
       document.removeEventListener('visibilitychange', onVisibility);
       services.navigation.destroy();

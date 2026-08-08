@@ -18,7 +18,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  animation: stepIn 260ms var(--ease-standard) both;
+  animation: stepIn var(--duration-slow) var(--ease-standard) both;
 }
 
 .panel[data-direction='back'] {
@@ -72,7 +72,7 @@
 
 /* Reduce Motion: a short crossfade, no spatial movement. */
 .panel[data-reduced] {
-  animation: stepFade 140ms linear both;
+  animation: stepFade var(--duration-fast) linear both;
 }
 
 @keyframes stepFade {
@@ -87,6 +87,6 @@
 @media (prefers-reduced-motion: reduce) {
   .panel,
   .panel[data-direction='back'] {
-    animation: stepFade 140ms linear both;
+    animation: stepFade var(--duration-fast) linear both;
   }
 }

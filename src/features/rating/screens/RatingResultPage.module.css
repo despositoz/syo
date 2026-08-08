@@ -10,7 +10,7 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  animation: resultIn 320ms var(--ease-standard) both;
+  animation: resultIn var(--duration-emphasis) var(--ease-standard) both;
 }
 
 .phrase {

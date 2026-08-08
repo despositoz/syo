@@ -64,8 +64,31 @@ const GLOBAL_COOLDOWN_MS = 40;
 /** Identical event + payload inside this window is a duplicate projection. */
 const DEDUPE_WINDOW_MS = 350;
 
+/**
+ * The user's setting (Master §7).
+ *
+ * `delicate` is not "weaker vibration" — the API has no such control. It is a
+ * *narrower map*: selection and soft confirmations stay, secondary impacts and
+ * routine notifications drop out.
+ */
+export type HapticIntensity = 'off' | 'delicate' | 'full';
+
+/** What survives in delicate mode: state changes worth feeling, nothing else. */
+const DELICATE_ALLOWED: ReadonlySet<HapticEvent> = new Set<HapticEvent>([
+  'tabSelection',
+  'ratingValueChange',
+  'ratingModeSelect',
+  'bookmarkAdd',
+  'bookmarkRemove',
+  'pullThreshold',
+  // Completions that actually matter, and the two failures worth feeling.
+  'ratingSaved',
+  'criticalError',
+  'storageWarning',
+]);
+
 export class HapticManager {
-  private enabled = true;
+  private intensity: HapticIntensity = 'full';
   private lastEventAt = new Map<HapticEvent, number>();
   private lastSignature: { key: string; at: number } | null = null;
   // -Infinity, not 0: performance.now() starts near zero, and a 0 baseline
@@ -79,11 +102,19 @@ export class HapticManager {
 
   /** User preference. System availability is asked from the driver. */
   setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
+    this.intensity = enabled ? 'full' : 'off';
+  }
+
+  setIntensity(intensity: HapticIntensity): void {
+    this.intensity = intensity;
+  }
+
+  getIntensity(): HapticIntensity {
+    return this.intensity;
   }
 
   isEnabled(): boolean {
-    return this.enabled && this.driver.isAvailable();
+    return this.intensity !== 'off' && this.driver.isAvailable();
   }
 
   /**
@@ -92,6 +123,9 @@ export class HapticManager {
    */
   trigger(event: HapticEvent, dedupeKey?: string): boolean {
     if (!this.isEnabled()) return false;
+    // Delicate keeps the map, not the volume: secondary events simply do not
+    // fire, so one action never turns into a chain of buzzes.
+    if (this.intensity === 'delicate' && !DELICATE_ALLOWED.has(event)) return false;
 
     const now = this.now();
     const signature = `${event}:${dedupeKey ?? ''}`;

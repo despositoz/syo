@@ -46,7 +46,7 @@
 
 .full {
   opacity: 0;
-  transition: opacity 180ms linear;
+  transition: opacity var(--duration-medium) linear;
 }
 
 .poster[data-stage='full'] .full {

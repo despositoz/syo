@@ -17,6 +17,11 @@ export const PAGE_EXIT_SHIFT_PX = 8;
 
 export interface TransitionOptions {
   reducedMotion?: boolean;
+  /**
+   * How much of the designed duration to run, 0–1 (Master §48). The in-app
+   * 'calm' choice shortens the transition; it never removes it.
+   */
+  scale?: number;
 }
 
 export const pageEnterKeyframes = (): Keyframe[] => [
@@ -38,8 +43,9 @@ export const pageTimings = (
     // Reduce Motion: a very short fade, no movement.
     return { duration: 90, easing: 'linear', fill: 'both' };
   }
+  const scale = options.scale ?? 1;
   return {
-    duration: direction === 'enter' ? PAGE_ENTER_MS : PAGE_EXIT_MS,
+    duration: (direction === 'enter' ? PAGE_ENTER_MS : PAGE_EXIT_MS) * scale,
     easing:
       direction === 'enter' ? 'cubic-bezier(0.32, 0.72, 0, 1)' : 'cubic-bezier(0.4, 0, 0.6, 1)',
     fill: 'both',
@@ -66,6 +72,9 @@ export const runPageTransition = (
       ? pageEnterKeyframes()
       : pageExitKeyframes();
 
-  const animation = element.animate(keyframes, pageTimings(direction, { reducedMotion: reduced }));
+  const animation = element.animate(
+    keyframes,
+    pageTimings(direction, { reducedMotion: reduced, scale: options.scale }),
+  );
   return animation.finished.catch(() => undefined).then(() => undefined);
 };

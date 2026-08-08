@@ -34,7 +34,7 @@
   font-size: 0.9375rem;
   line-height: 1.3;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  animation: rise 180ms var(--ease-standard) both;
+  animation: rise var(--duration-medium) var(--ease-standard) both;
 }
 
 @keyframes rise {

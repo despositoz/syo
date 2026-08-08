@@ -13,33 +13,61 @@ export type PerformanceTier = 'full' | 'balanced' | 'minimal';
 export interface PerformanceCapabilities {
   tier: PerformanceTier;
   reducedMotion: boolean;
+  /** The user's own choice, weaker than the system switch (Master §48). */
+  motionPreference: 'system' | 'calm' | 'expressive';
+  /** How much of the designed amplitude to actually use, 0–1. */
+  motionScale: number;
   /** Hero depth effects allowed at all. */
   parallaxEnabled: boolean;
   inertiaEnabled: boolean;
   ambientEnabled: boolean;
 }
 
+/**
+ * How much of the designed amplitude survives.
+ *
+ * The system switch always wins (Master §48): Reduce Motion collapses movement
+ * whatever the in-app choice says. Calm is the milder in-app step — it keeps
+ * causal transitions and takes most of the depth away.
+ */
+const scaleFor = (
+  preference: 'system' | 'calm' | 'expressive',
+  reducedMotion: boolean,
+  tier: PerformanceTier,
+): number => {
+  if (reducedMotion) return 0.15;
+  if (preference === 'calm') return 0.4;
+  return tier === 'minimal' ? 0.5 : 1;
+};
+
 const capabilitiesFor = (
   tier: PerformanceTier,
   reducedMotion: boolean,
+  motionPreference: 'system' | 'calm' | 'expressive' = 'system',
 ): PerformanceCapabilities => ({
   tier,
   reducedMotion,
+  motionPreference,
+  motionScale: scaleFor(motionPreference, reducedMotion, tier),
   // Reduce Motion keeps a minimal hero depth rather than removing it entirely.
   parallaxEnabled: true,
-  inertiaEnabled: !reducedMotion && tier === 'full',
+  inertiaEnabled: !reducedMotion && motionPreference !== 'calm' && tier === 'full',
   ambientEnabled: tier !== 'minimal',
 });
 
 interface PerformanceState extends PerformanceCapabilities {
   setTier: (tier: PerformanceTier) => void;
   setReducedMotion: (reduced: boolean) => void;
+  setMotionPreference: (preference: 'system' | 'calm' | 'expressive') => void;
 }
 
 export const usePerformanceStore = create<PerformanceState>((set, get) => ({
   ...capabilitiesFor('full', prefersReducedMotion()),
-  setTier: (tier) => set(capabilitiesFor(tier, get().reducedMotion)),
-  setReducedMotion: (reducedMotion) => set(capabilitiesFor(get().tier, reducedMotion)),
+  setTier: (tier) => set(capabilitiesFor(tier, get().reducedMotion, get().motionPreference)),
+  setReducedMotion: (reducedMotion) =>
+    set(capabilitiesFor(get().tier, reducedMotion, get().motionPreference)),
+  setMotionPreference: (motionPreference) =>
+    set(capabilitiesFor(get().tier, get().reducedMotion, motionPreference)),
 }));
 
 /** Frames slower than this count as dropped at 60 Hz. */
@@ -57,6 +85,7 @@ export class PerformanceController {
   private slowFrames = 0;
   private lastFrameAt = 0;
   private unsubscribeMotion: (() => void) | null = null;
+  private unsubscribeStore: (() => void) | null = null;
   private running = false;
 
   constructor(private readonly win: Window = window) {}
@@ -79,6 +108,9 @@ export class PerformanceController {
       usePerformanceStore.getState().setTier('balanced');
     }
 
+    // The preference can change from Settings at any time, not just on a tick.
+    this.unsubscribeStore = usePerformanceStore.subscribe(() => this.applyDataset());
+
     this.applyDataset();
     this.measure();
   }
@@ -88,6 +120,8 @@ export class PerformanceController {
     this.win.cancelAnimationFrame(this.rafId);
     this.unsubscribeMotion?.();
     this.unsubscribeMotion = null;
+    this.unsubscribeStore?.();
+    this.unsubscribeStore = null;
   }
 
   private measure(): void {
@@ -121,6 +155,14 @@ export class PerformanceController {
     const state = usePerformanceStore.getState();
     const root = this.win.document.documentElement;
     root.dataset.performance = state.tier;
-    root.dataset.motion = state.reducedMotion ? 'reduced' : 'full';
+    /*
+     * The one place the motion choice becomes CSS. Reduce Motion always wins
+     * over the in-app setting (Master §48); 'calm' only shortens.
+     */
+    root.dataset.motion = state.reducedMotion
+      ? 'reduced'
+      : state.motionPreference === 'calm'
+        ? 'calm'
+        : 'full';
   }
 }
