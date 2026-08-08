@@ -1,0 +1,72 @@
+.page {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+}
+
+.scroll {
+  height: 100%;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: calc(var(--content-safe-top) + var(--space-3))
+    max(var(--space-4), calc(var(--content-safe-right) + var(--space-4)))
+    calc(var(--safe-bottom) + 132px)
+    max(var(--space-4), calc(var(--content-safe-left) + var(--space-4)));
+  /* A profile is reading, not a billboard. */
+  width: min(100%, var(--content-max-reading));
+  margin-inline: auto;
+}
+
+/* Controls stay clear of the Telegram cluster on the right. */
+.header {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: var(--tg-controls-keepout-right);
+  min-height: var(--touch-min);
+}
+
+.archive {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  text-wrap: balance;
+}
+
+.coldStart {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.privacy {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text-tertiary);
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  margin-inline: calc(var(--space-3) * -1);
+  border-radius: var(--radius-md);
+  text-align: left;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.link:active {
+  background: var(--color-surface);
+}

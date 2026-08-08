@@ -10,7 +10,17 @@ import { usePerformanceStore } from './performance/PerformanceController';
 import { FeedPage } from '@features/feed/screens/FeedPage';
 import { DiaryPage } from '@features/diary/screens/DiaryPage';
 import { DiaryEntryPage } from '@features/diary/screens/DiaryEntryPage';
-import { ProfilePlaceholderPage } from '@pages/profile/ProfilePlaceholderPage';
+import { ProfilePage } from '@features/profile/screens/ProfilePage';
+const TasteSignaturePage = lazy(() =>
+  import('@features/profile/screens/TasteSignaturePage').then((module) => ({
+    default: module.TasteSignaturePage,
+  })),
+);
+const SettingsPage = lazy(() =>
+  import('@features/profile/screens/SettingsPage').then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
 import { MoviePickerPage } from '@pages/movie-picker/MoviePickerPage';
 import { FilmPage } from '@pages/film/FilmPage';
 import { RatingModePage } from '@features/rating/screens/RatingModePage';
@@ -35,7 +45,7 @@ const RootScreen = ({ tab }: { tab: RootTab }) => {
     case 'diary':
       return <DiaryPage />;
     case 'profile':
-      return <ProfilePlaceholderPage />;
+      return <ProfilePage />;
   }
 };
 
@@ -59,6 +69,18 @@ const OverlayScreen = ({ route }: { route: Route }) => {
         // "loading" would be more noticeable than the wait itself.
         <Suspense fallback={null}>
           <WritingPage entryId={route.entryId} screen={route.screen} />
+        </Suspense>
+      );
+    case 'tasteSignature':
+      return (
+        <Suspense fallback={null}>
+          <TasteSignaturePage />
+        </Suspense>
+      );
+    case 'settings':
+      return (
+        <Suspense fallback={null}>
+          <SettingsPage />
         </Suspense>
       );
     case 'diaryEntry':

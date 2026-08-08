@@ -34,6 +34,8 @@ export class NavigationController {
   private pendingPush: Route[] = [];
   /** What a repeat tap on an already-active root tab does, per tab. */
   private readonly tabInterceptors = new Map<RootTab, () => void>();
+  /** A back requested while a history unwind was still in the air. */
+  private pendingBack = false;
 
   constructor(
     private readonly telegram: TelegramController,
@@ -93,9 +95,13 @@ export class NavigationController {
     this.replaceHistory(routeToPath({ kind: 'root', tab }), toDrop);
   }
 
-  openPicker(): void {
+  /**
+   * The movie picker. `selectFavorite` reuses the same screen to choose a
+   * favourite rather than growing a second search (§14.1).
+   */
+  openPicker(mode: 'rate' | 'selectFavorite' = 'rate'): void {
     this.telegram.requestFullscreenOnce();
-    this.pushRoute({ kind: 'picker' });
+    this.pushRoute({ kind: 'picker', ...(mode === 'rate' ? {} : { mode }) });
   }
 
   openFilm(params: FilmRouteParams): void {
@@ -133,22 +139,31 @@ export class NavigationController {
     this.pushRoute(route);
   }
 
-  /** Leaves writing and lands on the entry the text belongs to. */
+  /**
+   * Leaves writing and lands on the entry the text belongs to.
+   *
+   * Delegates to the same collapse-and-push the rating flow uses instead of
+   * counting history steps: a back issued around an unwind that is still in
+   * the air lands a step too far out, on the Diary root.
+   */
   closeWriting(entryId: string): void {
     // The flow is over, so its own back handling is over with it.
     this.backInterceptor = null;
+    this.showSavedEntry(entryId);
+  }
 
-    const state = useNavigationStore.getState();
-    const below = state.stack[state.stack.length - 2];
-    if (below?.kind === 'diaryEntry' && below.entryId === entryId) {
-      this.goBack();
-      return;
-    }
-    if (isWritingRoute(state.current())) {
-      this.replaceTop({ kind: 'diaryEntry', entryId });
-      return;
-    }
-    this.pushRoute({ kind: 'diaryEntry', entryId });
+  /** The full taste signature, opened from the profile hero. */
+  openTasteSignature(): void {
+    this.telegram.requestFullscreenOnce();
+    this.pushRoute({ kind: 'tasteSignature' });
+  }
+
+  openSettings(): void {
+    this.pushRoute({ kind: 'settings', section: 'root' });
+  }
+
+  openSettingsSection(section: 'appearance' | 'data' | 'about'): void {
+    this.pushRoute({ kind: 'settings', section });
   }
 
   openDiaryEntry(entryId: string): void {
@@ -205,6 +220,17 @@ export class NavigationController {
 
   goBack(): void {
     if (this.backInterceptor?.()) return;
+
+    /*
+     * A back issued while a previous unwind is still travelling would count
+     * against a depth the browser has not applied yet, and land a step too far
+     * out — on the Diary root instead of the entry that was just saved. It
+     * waits for the popstate that is already coming.
+     */
+    if (this.pendingStack) {
+      this.pendingBack = true;
+      return;
+    }
 
     const state = useNavigationStore.getState();
     if (state.stack.length <= 1) return;
@@ -271,6 +297,11 @@ export class NavigationController {
       const push = this.pendingPush;
       this.pendingPush = [];
       for (const route of push) this.pushRoute(route);
+
+      if (this.pendingBack) {
+        this.pendingBack = false;
+        this.goBack();
+      }
       return;
     }
 

@@ -11,6 +11,7 @@ import { clearFilmMemoryCache } from '@entities/film/film.cache';
 import { useRatingStore } from '@features/rating/model/rating.store';
 import { useWritingStore } from '@features/writing/model/writing.store';
 import { resetFeedStore } from '@features/feed/model/feed.store';
+import { resetProfileStore } from '@features/profile/model/profile.store';
 import { useDiaryStore } from '@features/diary/model/diary.store';
 import { db } from '@shared/storage/db';
 import type { TelegramWebApp } from '@app/telegram/telegramTypes';
@@ -228,6 +229,7 @@ export const resetAppState = async (): Promise<void> => {
   // The feed keeps a snapshot in module state; a stale one would make the next
   // test believe it is already hydrated and skip its own fetch.
   resetFeedStore();
+  resetProfileStore();
   useDiaryStore.setState({ entries: [], hydrated: false, view: 'grid', highlightedId: null });
   useThemeStore.setState({ preference: 'cinema', colorScheme: 'dark', resolved: 'cinema' });
   useSnackbarStore.setState({ current: null });
@@ -240,6 +242,8 @@ export const resetAppState = async (): Promise<void> => {
   await db.syncQueue.clear();
   await db.ratingDrafts.clear();
   await db.diaryEntries.clear();
+  await db.profiles.clear();
+  await db.tasteProfiles.clear();
   localStorage.clear();
   window.history.replaceState({}, '', '/');
 };

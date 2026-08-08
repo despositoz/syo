@@ -1,0 +1,125 @@
+.page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: calc(var(--content-safe-top) + var(--space-2))
+    calc(var(--content-safe-right) + var(--tg-controls-keepout-right) + var(--space-3))
+    var(--space-2) calc(var(--content-safe-left) + var(--space-3));
+  min-height: calc(var(--content-safe-top) + var(--touch-min));
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 640;
+}
+
+.scroll {
+  flex: 1 1 auto;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-2) max(var(--space-4), calc(var(--content-safe-right) + var(--space-4)))
+    calc(var(--safe-bottom) + var(--space-8))
+    max(var(--space-4), calc(var(--content-safe-left) + var(--space-4)));
+  width: min(100%, var(--content-max-reading));
+  margin-inline: auto;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.groupTitle {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 620;
+  color: var(--color-text);
+  padding: 0;
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-3);
+  margin-inline: calc(var(--space-3) * -1);
+  border-radius: var(--radius-md);
+}
+
+.option:active {
+  background: var(--color-surface);
+}
+
+.option input {
+  margin-top: 2px;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: var(--color-accent);
+}
+
+.optionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.optionLabel {
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.optionHint {
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+  text-wrap: balance;
+}
+
+.note {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-text-tertiary);
+  text-wrap: balance;
+}
+
+.warning {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: #e9a2a2;
+  text-wrap: balance;
+}
+
+.sheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  list-style: disc;
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+}

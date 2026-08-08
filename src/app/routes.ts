@@ -41,6 +41,10 @@ const relativePath = (route: Route): string => {
       return `/rate/${route.filmId}/result`;
     case 'write':
       return `/write/${route.entryId}/${route.screen}`;
+    case 'tasteSignature':
+      return '/profile/signature';
+    case 'settings':
+      return route.section === 'root' ? '/settings' : `/settings/${route.section}`;
     case 'diaryEntry':
       return `/diary/${route.entryId}`;
   }
@@ -95,6 +99,19 @@ export const pathToStack = (pathname: string): Route[] => {
       }
     }
     return ratingStack(filmId, { kind: 'rateMode', filmId });
+  }
+
+  if (first === 'profile' && second === 'signature') {
+    return [{ kind: 'root', tab: 'profile' }, { kind: 'tasteSignature' }];
+  }
+
+  if (first === 'settings') {
+    const section =
+      second === 'appearance' || second === 'data' || second === 'about' ? second : 'root';
+    return [
+      { kind: 'root', tab: 'profile' },
+      { kind: 'settings', section },
+    ];
   }
 
   if (first === 'write' && second) {

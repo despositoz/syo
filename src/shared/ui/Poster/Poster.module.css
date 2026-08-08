@@ -1,6 +1,7 @@
 .poster {
   position: relative;
   overflow: hidden;
+  container-type: inline-size;
   /*
    * Fills whatever frame the parent provides. The poster knows its ratio and
    * nothing else about layout: sizing is the frame's business (P0.3.1 §4.2).
@@ -50,6 +51,17 @@
 
 .poster[data-stage='full'] .full {
   opacity: 1;
+}
+
+/*
+ * Below this the frame is decoration, not a label: a title squeezed into 44px
+ * is unreadable noise, so the dominant colour carries it alone.
+ */
+@container (max-width: 64px) {
+  .fallbackTitle,
+  .fallbackYear {
+    display: none;
+  }
 }
 
 /* Stage 4 — typographic fallback. No icon, no wordmark. */

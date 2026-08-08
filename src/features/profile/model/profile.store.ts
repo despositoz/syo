@@ -129,9 +129,10 @@ export const useProfileStore = create<ProfileState>((set, get) => {
         now: new Date().toISOString(),
       });
 
-      // Nothing changed: keep the snapshot we have rather than rewriting it.
+      // Nothing changed: keep the snapshot we have rather than rewriting it,
+      // and keep the same films map so nothing re-renders for no reason.
       if (!options.force && next.sourceRevision === get().snapshot.sourceRevision) {
-        set({ films });
+        if (films.size !== get().films.size) set({ films });
         return;
       }
 

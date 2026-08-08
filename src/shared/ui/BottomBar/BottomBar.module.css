@@ -22,9 +22,13 @@
   pointer-events: none;
 }
 
+/*
+ * `minmax(0, 1fr)` and not `1fr`: at 200% text a label's min-content width
+ * would otherwise push the whole bar wider than the screen.
+ */
 .list {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: stretch;
   padding: var(--space-1);
 }
@@ -42,6 +46,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
+  min-width: 0;
   min-height: var(--touch-min);
   padding: var(--space-2) var(--space-1);
   border-radius: var(--radius-lg);
@@ -92,6 +97,10 @@
 
 .label {
   position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   /* 12px is the floor for a label that has to be read at a glance. */
   font-size: 0.75rem;
   line-height: 1.1;

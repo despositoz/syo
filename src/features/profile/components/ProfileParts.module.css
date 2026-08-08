@@ -1,0 +1,361 @@
+/* --- identity ------------------------------------------------------------- */
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  /* At 200% text the button takes its own line rather than the right edge. */
+  flex-wrap: wrap;
+}
+
+.identity > button {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.avatar {
+  flex: 0 0 80px;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  /* Warm gradient, no permanent glow ring (§11.1). */
+  background: linear-gradient(150deg, rgba(160, 62, 80, 0.9), rgba(60, 24, 34, 0.9));
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.initials {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 640;
+  color: #fdf3f0;
+}
+
+.identityBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 5.4vw, 1.625rem);
+  font-weight: 660;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.bio {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* --- sections -------------------------------------------------------------- */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  /* At large text the action takes its own line instead of the margin. */
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 620;
+  color: var(--color-text);
+}
+
+.sectionAction {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-2);
+  /* Optical alignment, but never wider than the column it sits in. */
+  margin-right: calc(var(--space-2) * -1);
+  max-width: 100%;
+  font-size: 0.9375rem;
+  font-weight: 620;
+  color: var(--color-accent-text);
+}
+
+.empty {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+  text-wrap: balance;
+}
+
+/* --- favourites ------------------------------------------------------------ */
+
+.favoriteRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 88px), 1fr));
+  gap: var(--space-3);
+}
+
+.favorite {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.favoritePoster {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.favorite:active {
+  transform: scale(0.985);
+}
+
+/* --- taste hero ------------------------------------------------------------ */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  /* A quiet surface, not a coloured advertising card (§11.3). */
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 5vw, 1.5rem);
+  font-weight: 640;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.heroHint {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+}
+
+.heroPosters {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.heroPoster {
+  width: 44px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+/* --- signal sections -------------------------------------------------------- */
+
+.signal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.signalTitle {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 620;
+}
+
+.signalConclusion {
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--color-text);
+  text-wrap: balance;
+}
+
+.signalMeta {
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+}
+
+.why {
+  align-self: flex-start;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  font-size: 0.9375rem;
+  font-weight: 620;
+  color: var(--color-accent-text);
+}
+
+.whyBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* --- evidence --------------------------------------------------------------- */
+
+.evidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.evidenceRow {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  grid-template-areas:
+    'poster body'
+    'poster bar';
+  align-items: center;
+  gap: 2px var(--space-3);
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.evidenceRow:active {
+  background: var(--color-surface);
+}
+
+.evidencePoster {
+  grid-area: poster;
+  width: 40px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.evidenceBody {
+  grid-area: body;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.evidenceTitle {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.evidenceMeta {
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.contribution {
+  grid-area: bar;
+  display: block;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-hairline);
+  overflow: hidden;
+}
+
+.contribution > span {
+  display: block;
+  height: 100%;
+  background: rgba(var(--film-accent-rgb, 200, 120, 135), 0.85);
+}
+
+/* --- bars -------------------------------------------------------------------- */
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.barLabel {
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+}
+
+.barTrack {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-hairline);
+  overflow: hidden;
+}
+
+.barTrack > span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--film-accent-rgb, 200, 120, 135), 0.8);
+}
+
+.barValue {
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+/* --- favourites editor -------------------------------------------------------- */
+
+.editorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.editorPoster {
+  flex: 0 0 40px;
+  width: 40px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.editorTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.editorControls {
+  display: flex;
+  gap: 2px;
+  flex: 0 0 auto;
+}

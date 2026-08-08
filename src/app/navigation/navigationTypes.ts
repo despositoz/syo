@@ -29,12 +29,18 @@ export interface WritingRoute {
   screen: WritingScreen;
 }
 
+/** Profile is a root tab; these are the screens inside and beside it. */
+export type ProfileRoute =
+  | { kind: 'tasteSignature' }
+  | { kind: 'settings'; section: 'root' | 'appearance' | 'data' | 'about' };
+
 export type Route =
   | { kind: 'root'; tab: RootTab }
-  | { kind: 'picker' }
+  | { kind: 'picker'; mode?: 'rate' | 'selectFavorite' }
   | ({ kind: 'film' } & FilmRouteParams)
   | RatingRoute
   | WritingRoute
+  | ProfileRoute
   | { kind: 'diaryEntry'; entryId: string };
 
 export type RouteKind = Route['kind'];
@@ -84,6 +90,10 @@ export const routeKey = (route: Route): string => {
       // All writing screens share one key, so switching screens keeps the
       // editor mounted and the typed text on screen.
       return `write:${route.entryId}`;
+    case 'tasteSignature':
+      return 'profile:signature';
+    case 'settings':
+      return `settings:${route.section}`;
     case 'diaryEntry':
       return `diary:${route.entryId}`;
   }

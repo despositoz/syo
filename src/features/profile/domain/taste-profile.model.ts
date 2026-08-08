@@ -114,8 +114,12 @@ export interface TasteProfileSnapshot {
   engineVersion: number;
 }
 
-/** Bumped when a calculation changes, so stored snapshots are recomputed. */
-export const ENGINE_VERSION = 1;
+/**
+ * Bumped when a calculation *or a wording* changes: a stored snapshot carries
+ * its headline text with it, so an old one would keep showing the old sentence
+ * until the archive happened to move.
+ */
+export const ENGINE_VERSION = 2;
 
 export const emptySnapshot = (now = new Date().toISOString()): TasteProfileSnapshot => ({
   id: 'current',

@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { IconButton } from '../IconButton/IconButton';
 import { CloseIcon } from '../icons';
 import styles from './Sheet.module.css';
@@ -75,7 +76,12 @@ export const Sheet = ({ open, title, onClose, children }: SheetProps) => {
 
   if (!open) return null;
 
-  return (
+  /*
+   * Portalled to the body on purpose. Rendered inside a page layer, the sheet's
+   * z-index is trapped in that layer's stacking context, and the floating
+   * bottom bar — a sibling of the layer — paints over the sheet's last button.
+   */
+  return createPortal(
     <div className={styles.overlay}>
       <button type="button" className={styles.scrim} aria-label="Закрыть" onClick={onClose} />
       <div
@@ -94,6 +100,7 @@ export const Sheet = ({ open, title, onClose, children }: SheetProps) => {
         </header>
         <div className={`${styles.body} scroll-y`}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };

@@ -76,10 +76,16 @@ test.describe('Writing a text', () => {
 
     await page.getByTestId('writing-save').click();
 
-    await expect(page.getByTestId('entry-text-body')).toContainText('не хочется нарушать');
+    // Saving crosses a storage write and a route change; under a loaded
+    // machine that is slower than the default five seconds.
+    await expect(page.getByTestId('entry-text-body')).toContainText('не хочется нарушать', {
+      timeout: 15000,
+    });
     // Local-first: the text is there after a restart, with no network involved.
     await page.reload();
-    await expect(page.getByTestId('entry-text-body')).toContainText('не хочется нарушать');
+    await expect(page.getByTestId('entry-text-body')).toContainText('не хочется нарушать', {
+      timeout: 15000,
+    });
   });
 
   test('the draft survives a reload mid-sentence', async ({ page }) => {

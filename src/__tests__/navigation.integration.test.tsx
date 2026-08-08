@@ -130,7 +130,8 @@ describe('navigation', () => {
     const bar = screen.getByLabelText('Основная навигация');
     await user.click(within(bar).getByRole('button', { name: 'Профиль' }));
 
-    expect(await screen.findByRole('heading', { name: 'Профиль', level: 1 })).toBeInTheDocument();
+    // The profile leads with who you are, not with the word "Профиль" (§11.1).
+    expect(await screen.findByTestId('profile-identity')).toBeInTheDocument();
     expect(screen.getByLabelText('Основная навигация')).not.toHaveAttribute('aria-hidden');
   });
 });

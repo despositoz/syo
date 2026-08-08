@@ -32,8 +32,8 @@ export const buildHeadline = (snapshot: TasteProfileSnapshot): TasteHeadline | n
     return {
       templateId: 'aspect+genre',
       text: forming
-        ? `Пока похоже, что ${lower(aspectName(aspect.leadAspect))} вытягивает твою оценку, а ${lower(genre.genre)} держится выше остального`
-        : `${aspectName(aspect.leadAspect)} чаще всего поднимает твою оценку, а ${lower(genre.genre)} держится выше остального`,
+        ? `Пока похоже, что оценку вытягивает ${lower(aspectName(aspect.leadAspect))}, а выше остального держится ${lower(genre.genre)}`
+        : `Твою оценку чаще всего поднимает ${lower(aspectName(aspect.leadAspect))}, а выше остального держится ${lower(genre.genre)}`,
       evidenceKeys: [aspect.evidenceKey, genre.evidenceKey],
     };
   }
@@ -43,7 +43,7 @@ export const buildHeadline = (snapshot: TasteProfileSnapshot): TasteHeadline | n
       templateId: 'aspect',
       text: forming
         ? `Пока сильнее всего на твою оценку влияет ${lower(aspectName(aspect.leadAspect))}`
-        : `${aspectName(aspect.leadAspect)} чаще всего поднимает твою итоговую оценку`,
+        : `Твою итоговую оценку чаще всего поднимает ${lower(aspectName(aspect.leadAspect))}`,
       evidenceKeys: [aspect.evidenceKey],
     };
   }
@@ -52,8 +52,8 @@ export const buildHeadline = (snapshot: TasteProfileSnapshot): TasteHeadline | n
     return {
       templateId: 'director+genre',
       text: forming
-        ? `Пока в архиве повторяются ${lower(genre.genre)} и фильмы ${director.name}`
-        : `Ты возвращаешься к ${lower(genre.genre)} и к фильмам ${director.name}`,
+        ? `Пока выше остального держится ${lower(genre.genre)}, и чаще других повторяется один режиссёр — ${director.name}`
+        : `Выше остального держится ${lower(genre.genre)}, и чаще других повторяется один режиссёр — ${director.name}`,
       evidenceKeys: [director.evidenceKey, genre.evidenceKey],
     };
   }
@@ -72,8 +72,8 @@ export const buildHeadline = (snapshot: TasteProfileSnapshot): TasteHeadline | n
     return {
       templateId: 'director',
       text: forming
-        ? `Пока в архиве заметны фильмы ${director.name}`
-        : `Фильмы ${director.name} держатся у тебя особенно высоко`,
+        ? `Пока в архиве чаще других повторяется один режиссёр — ${director.name}`
+        : `Один режиссёр держится у тебя особенно высоко — ${director.name}`,
       evidenceKeys: [director.evidenceKey],
     };
   }
