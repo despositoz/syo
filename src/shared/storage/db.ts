@@ -104,6 +104,9 @@ export class SyoDatabase extends Dexie {
    */
   ratingDrafts!: Table<ActiveDraft, string>;
   diaryEntries!: Table<DiaryEntry, string>;
+  /** The one local profile, and the one derived taste snapshot. */
+  profiles!: Table<Record<string, unknown>, string>;
+  tasteProfiles!: Table<Record<string, unknown>, string>;
   feedFeedback!: Table<FeedFeedbackRow, string>;
   feedImpressions!: Table<FeedImpressionRow, string>;
   feedPosition!: Table<FeedPositionRow, string>;
@@ -182,6 +185,16 @@ export class SyoDatabase extends Dexie {
       feedFeedback: 'id, itemId, filmId, action, createdAt',
       feedImpressions: 'itemId, lastShownAt',
       feedPosition: 'key',
+    });
+
+    /*
+     * v6 gives the profile a home: the local identity the user edits and the
+     * derived taste snapshot. The snapshot is derived data — it may be dropped
+     * and recomputed, while the diary it comes from is never touched (§27).
+     */
+    this.version(6).stores({
+      profiles: 'id',
+      tasteProfiles: 'id',
     });
   }
 }

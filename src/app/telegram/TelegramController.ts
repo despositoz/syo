@@ -7,6 +7,7 @@ import {
   type TelegramInsets,
   type TelegramState,
   type TelegramTrailEntry,
+  type TelegramUser,
   type TelegramWebApp,
 } from './telegramTypes';
 
@@ -163,6 +164,22 @@ export class TelegramController {
    */
   getInitData(): string {
     return this.webApp?.initData ?? '';
+  }
+
+  /**
+   * The Telegram identity, used only as a *suggestion* for the local profile
+   * name and avatar (§6.1). Unverified by design: nothing is trusted to it,
+   * and nothing about it is sent anywhere.
+   */
+  getUser(): TelegramUser | null {
+    const user = this.webApp?.initDataUnsafe?.user;
+    if (!user || typeof user.id !== 'number') return null;
+    return {
+      id: user.id,
+      firstName: user.first_name ?? null,
+      lastName: user.last_name ?? null,
+      photoUrl: user.photo_url ?? null,
+    };
   }
 
   subscribe(listener: TelegramStateListener): () => void {

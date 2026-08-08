@@ -77,7 +77,19 @@ export interface TelegramHapticFeedback {
   selectionChanged: () => void;
 }
 
+/** The pieces of `initDataUnsafe.user` the profile suggests a name from. */
+export interface TelegramUser {
+  id: number;
+  firstName: string | null;
+  lastName: string | null;
+  photoUrl: string | null;
+}
+
 export interface TelegramWebApp {
+  /** Unverified client-side copy; used only as a name suggestion (§6.1). */
+  initDataUnsafe?: {
+    user?: { id?: number; first_name?: string; last_name?: string; photo_url?: string };
+  };
   initData?: string;
   version?: string;
   platform?: string;
